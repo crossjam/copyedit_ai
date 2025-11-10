@@ -8,6 +8,7 @@ authors = [{name = "crossjam", email = "bmd@pirateninja.dev"}]
 repository = "https://github.com/crossjam/copyedit_ai"
 requires-python = ">=3.11,<4.0"
 dependencies = [
+    "llm",
     "loguru",
     "typer",
     "pydantic_settings",
@@ -189,7 +190,15 @@ lint.ignore = [
   # assert (S101)
   "S101",
   # subprocess-without-shell-equals-true (S603)
-  "S603"
+  "S603",
+  # missing-type-function-argument (ANN001)
+  "ANN001",
+  # missing-return-type-undocumented-public-function (ANN201)
+  "ANN201"
+]
+"src/copyedit_ai/__main__.py" = [
+  # function-call-in-default-argument (B008) - false positive for Typer
+  "B008"
 ]
 
 [tool.ty]
