@@ -4,6 +4,7 @@ import importlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import yaml
 from typer.testing import CliRunner
 
 main_module_name = "copyedit_ai.__main__"
@@ -138,3 +139,108 @@ def test_cli_file_not_found() -> None:
     validation_error_exit_code = 2
     assert result.exit_code == validation_error_exit_code
     # Typer will show an error about the file not existing
+
+
+@patch("copyedit_ai.self_subcommand.llm.user_dir")
+def test_cli_self_install_template(mock_user_dir, tmp_path: Path) -> None:
+    """Test the self install-template subcommand."""
+    # Create a temporary llm user directory
+    mock_user_dir.return_value = str(tmp_path)
+    templates_dir = tmp_path / "templates"
+
+    result = runner.invoke(cli, ["self", "install-template"])
+
+    assert result.exit_code == 0
+    assert "Installed template 'copyedit'" in result.output
+
+    # Verify the template file was created
+    template_path = templates_dir / "copyedit.yaml"
+    assert template_path.exists()
+
+    # Verify the template content
+    with template_path.open() as f:
+        template_data = yaml.safe_load(f)
+
+    assert "system" in template_data
+    assert "copyeditor" in template_data["system"]
+    assert "prompt" in template_data
+    assert "$input" in template_data["prompt"]
+
+
+@patch("copyedit_ai.self_subcommand.llm.user_dir")
+def test_cli_self_install_template_custom_name(mock_user_dir, tmp_path: Path) -> None:
+    """Test the self install-template subcommand with custom name."""
+    # Create a temporary llm user directory
+    mock_user_dir.return_value = str(tmp_path)
+    templates_dir = tmp_path / "templates"
+
+    result = runner.invoke(cli, ["self", "install-template", "my-template"])
+
+    assert result.exit_code == 0
+    assert "Installed template 'my-template'" in result.output
+
+    # Verify the template file was created
+    template_path = templates_dir / "my-template.yaml"
+    assert template_path.exists()
+
+
+@patch("copyedit_ai.self_subcommand.llm.user_dir")
+def test_cli_self_install_template_already_exists(
+    mock_user_dir, tmp_path: Path
+) -> None:
+    """Test the self install-template subcommand when template already exists."""
+    # Create a temporary llm user directory
+    mock_user_dir.return_value = str(tmp_path)
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir(parents=True)
+    template_path = templates_dir / "copyedit.yaml"
+    template_path.write_text("existing: content")
+
+    result = runner.invoke(cli, ["self", "install-template"])
+
+    assert result.exit_code == 1
+    assert "already exists" in result.output
+
+
+@patch("copyedit_ai.self_subcommand.llm.user_dir")
+def test_cli_self_install_template_force(mock_user_dir, tmp_path: Path) -> None:
+    """Test the self install-template subcommand with --force option."""
+    # Create a temporary llm user directory
+    mock_user_dir.return_value = str(tmp_path)
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir(parents=True)
+    template_path = templates_dir / "copyedit.yaml"
+    template_path.write_text("existing: content")
+
+    result = runner.invoke(cli, ["self", "install-template", "--force"])
+
+    assert result.exit_code == 0
+    assert "Installed template 'copyedit'" in result.output
+
+    # Verify the template was overwritten
+    with template_path.open() as f:
+        template_data = yaml.safe_load(f)
+
+    assert "system" in template_data
+    assert "existing" not in template_data
+
+
+@patch("copyedit_ai.self_subcommand.llm.set_alias")
+def test_cli_self_install_alias(mock_set_alias) -> None:
+    """Test the self install-alias subcommand."""
+    result = runner.invoke(cli, ["self", "install-alias", "fast", "gpt-4o-mini"])
+
+    assert result.exit_code == 0
+    assert "Installed alias 'fast' -> 'gpt-4o-mini'" in result.output
+    mock_set_alias.assert_called_once_with("fast", "gpt-4o-mini")
+
+
+@patch("copyedit_ai.self_subcommand.llm.set_alias")
+def test_cli_self_install_alias_error(mock_set_alias) -> None:
+    """Test the self install-alias subcommand with error."""
+    mock_set_alias.side_effect = Exception("Test error")
+
+    result = runner.invoke(cli, ["self", "install-alias", "fast", "gpt-4o-mini"])
+
+    assert result.exit_code == 1
+    assert "Error:" in result.output
