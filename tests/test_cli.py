@@ -2,8 +2,9 @@
 
 import importlib
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, create_autospec, patch
 
+import llm
 import yaml
 from typer.testing import CliRunner
 
@@ -108,7 +109,8 @@ def test_cli_with_no_stream(mock_copyedit, tmp_path: Path) -> None:
     test_file.write_text("Test text.")
 
     # Mock the copyedit response for non-streaming
-    mock_response = MagicMock()
+    # Use create_autospec to make isinstance checks work
+    mock_response = create_autospec(llm.Response, instance=True)
     mock_response.text.return_value = "Corrected text"
     mock_copyedit.return_value = mock_response
 
