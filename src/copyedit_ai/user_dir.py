@@ -58,7 +58,7 @@ def is_initialized() -> bool:
     return llm_config_dir.exists() and llm_config_dir.is_dir()
 
 
-def initialize(force: bool = False) -> None:
+def initialize(*, force: bool = False) -> None:
     """Create directory structure.
 
     Args:

@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         """Set up LLM configuration path if isolated config is enabled."""
         if self.use_isolated_llm_config:
             # Import here to avoid circular imports
-            from .user_dir import set_llm_user_path
+            from .user_dir import set_llm_user_path  # noqa: PLC0415
 
             set_llm_user_path()
         return self

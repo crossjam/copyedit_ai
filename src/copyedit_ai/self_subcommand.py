@@ -5,6 +5,7 @@ internals of the copyedit_ai CLI.
 """
 
 import json
+import os
 import shutil
 from importlib.metadata import version
 from pathlib import Path
@@ -62,6 +63,7 @@ def init_command(
         copyedit_ai self init
         copyedit_ai self init --import-system-config
         copyedit_ai self init --force
+
     """
     try:
         app_config_dir = get_app_config_dir()
@@ -144,7 +146,7 @@ def _import_system_llm_config(target_dir: Path) -> None:
 
 
 @cli.command(name="check")
-def check_command(
+def check_command(  # noqa: C901, PLR0912, PLR0915
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -160,6 +162,7 @@ def check_command(
     Examples:
         copyedit_ai self check
         copyedit_ai self check --verbose
+
     """
     try:
         app_config_dir = get_app_config_dir()
@@ -172,11 +175,12 @@ def check_command(
             typer.echo(f"  LLM config: {llm_config_dir}")
 
             # Show isolated config status
-            import os
-
             llm_user_path = os.environ.get("LLM_USER_PATH")
             if llm_user_path:
-                typer.echo(f"  Isolated config: Enabled (LLM_USER_PATH={llm_user_path})")
+                typer.echo(
+                    f"  Isolated config: Enabled "
+                    f"(LLM_USER_PATH={llm_user_path})"
+                )
             else:
                 typer.echo("  Isolated config: Disabled")
 
@@ -220,7 +224,7 @@ def check_command(
             typer.secho("⚠ Configuration not initialized", fg=typer.colors.YELLOW)
             typer.echo(f"  Expected location: {app_config_dir}")
             typer.echo("\nRun 'copyedit_ai self init' to set up configuration.")
-            raise typer.Exit(1)
+            raise typer.Exit(1)  # noqa: TRY301
 
     except typer.Exit:
         raise
@@ -255,7 +259,7 @@ def install_template(
             logger.error("Configuration not initialized")
             typer.echo("Error: Configuration not initialized.", err=True)
             typer.echo("Run 'copyedit_ai self init' first.", err=True)
-            raise typer.Exit(1)
+            raise typer.Exit(1)  # noqa: TRY301
 
         # Set LLM user path to use isolated config
         set_llm_user_path()
@@ -273,7 +277,7 @@ def install_template(
                 f"Error: Template '{name}' already exists. Use --force to overwrite.",
                 err=True,
             )
-            raise typer.Exit(1)
+            raise typer.Exit(1)  # noqa: TRY301
 
         # Create the template
         template_content = {
@@ -314,6 +318,7 @@ def install_alias(
         copyedit_ai self install-alias fast gpt-4o-mini
         copyedit_ai self install-alias smart claude-3-5-sonnet-20241022
         copyedit_ai self install-alias cheap gpt-3.5-turbo
+
     """
     try:
         # Check if configuration is initialized
@@ -321,7 +326,7 @@ def install_alias(
             logger.error("Configuration not initialized")
             typer.echo("Error: Configuration not initialized.", err=True)
             typer.echo("Run 'copyedit_ai self init' first.", err=True)
-            raise typer.Exit(1)
+            raise typer.Exit(1)  # noqa: TRY301
 
         # Set LLM user path to use isolated config
         set_llm_user_path()
@@ -330,7 +335,10 @@ def install_alias(
         llm.set_alias(alias, model_id)
 
         logger.info(f"Created alias '{alias}' -> '{model_id}'")
-        typer.secho(f"✓ Installed alias '{alias}' -> '{model_id}'", fg=typer.colors.GREEN)
+        typer.secho(
+            f"✓ Installed alias '{alias}' -> '{model_id}'",
+            fg=typer.colors.GREEN,
+        )
         typer.echo(f"\nUsage: copyedit_ai -m {alias} 'Your text here'")
         typer.echo(f"       llm -m {alias} 'Your prompt'")
 

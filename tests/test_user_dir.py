@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -90,7 +89,7 @@ def test_initialize_creates_directories(tmp_path: Path, monkeypatch) -> None:
     assert templates_dir.is_dir()
 
 
-def test_initialize_already_initialized(tmp_path: Path, monkeypatch, caplog) -> None:
+def test_initialize_already_initialized(tmp_path: Path, monkeypatch) -> None:
     """Test initialize when already initialized doesn't fail."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
 
@@ -151,8 +150,6 @@ def test_set_llm_user_path_respects_existing(tmp_path: Path, monkeypatch) -> Non
 
 def test_initialize_permission_error(tmp_path: Path, monkeypatch) -> None:
     """Test initialize handles permission errors gracefully."""
-    import os
-
     # Skip test if running as root (permissions work differently)
     if os.getuid() == 0:
         pytest.skip("Test skipped when running as root")
@@ -165,7 +162,7 @@ def test_initialize_permission_error(tmp_path: Path, monkeypatch) -> None:
     app_config_dir.chmod(0o444)  # Read-only
 
     try:
-        with pytest.raises(OSError):
+        with pytest.raises(OSError):  # noqa: PT011
             user_dir.initialize()
     finally:
         # Cleanup: restore permissions

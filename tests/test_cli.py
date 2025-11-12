@@ -145,7 +145,10 @@ def test_cli_file_not_found() -> None:
 @patch("copyedit_ai.self_subcommand.set_llm_user_path")
 @patch("copyedit_ai.self_subcommand.llm.user_dir")
 def test_cli_self_install_template(
-    mock_user_dir, mock_set_llm_user_path, mock_is_initialized, tmp_path: Path
+    mock_user_dir,
+    _mock_set_llm_user_path,  # noqa: PT019
+    mock_is_initialized,
+    tmp_path: Path,
 ) -> None:
     """Test the self install-template subcommand."""
     # Mock initialization check
@@ -178,7 +181,10 @@ def test_cli_self_install_template(
 @patch("copyedit_ai.self_subcommand.set_llm_user_path")
 @patch("copyedit_ai.self_subcommand.llm.user_dir")
 def test_cli_self_install_template_custom_name(
-    mock_user_dir, mock_set_llm_user_path, mock_is_initialized, tmp_path: Path
+    mock_user_dir,
+    _mock_set_llm_user_path,  # noqa: PT019
+    mock_is_initialized,
+    tmp_path: Path,
 ) -> None:
     """Test the self install-template subcommand with custom name."""
     # Mock initialization check
@@ -202,7 +208,10 @@ def test_cli_self_install_template_custom_name(
 @patch("copyedit_ai.self_subcommand.set_llm_user_path")
 @patch("copyedit_ai.self_subcommand.llm.user_dir")
 def test_cli_self_install_template_already_exists(
-    mock_user_dir, mock_set_llm_user_path, mock_is_initialized, tmp_path: Path
+    mock_user_dir,
+    _mock_set_llm_user_path,  # noqa: PT019
+    mock_is_initialized,
+    tmp_path: Path,
 ) -> None:
     """Test the self install-template subcommand when template already exists."""
     # Mock initialization check
@@ -225,7 +234,10 @@ def test_cli_self_install_template_already_exists(
 @patch("copyedit_ai.self_subcommand.set_llm_user_path")
 @patch("copyedit_ai.self_subcommand.llm.user_dir")
 def test_cli_self_install_template_force(
-    mock_user_dir, mock_set_llm_user_path, mock_is_initialized, tmp_path: Path
+    mock_user_dir,
+    _mock_set_llm_user_path,  # noqa: PT019
+    mock_is_initialized,
+    tmp_path: Path,
 ) -> None:
     """Test the self install-template subcommand with --force option."""
     # Mock initialization check
@@ -268,7 +280,9 @@ def test_cli_self_install_template_not_initialized(mock_is_initialized) -> None:
 @patch("copyedit_ai.self_subcommand.set_llm_user_path")
 @patch("copyedit_ai.self_subcommand.llm.set_alias")
 def test_cli_self_install_alias(
-    mock_set_alias, mock_set_llm_user_path, mock_is_initialized
+    mock_set_alias,
+    _mock_set_llm_user_path,  # noqa: PT019
+    mock_is_initialized,
 ) -> None:
     """Test the self install-alias subcommand."""
     # Mock initialization check
@@ -285,7 +299,9 @@ def test_cli_self_install_alias(
 @patch("copyedit_ai.self_subcommand.set_llm_user_path")
 @patch("copyedit_ai.self_subcommand.llm.set_alias")
 def test_cli_self_install_alias_error(
-    mock_set_alias, mock_set_llm_user_path, mock_is_initialized
+    mock_set_alias,
+    _mock_set_llm_user_path,  # noqa: PT019
+    mock_is_initialized,
 ) -> None:
     """Test the self install-alias subcommand with error."""
     # Mock initialization check
@@ -317,7 +333,11 @@ def test_cli_self_install_alias_not_initialized(mock_is_initialized) -> None:
 @patch("copyedit_ai.self_subcommand.get_app_config_dir")
 @patch("copyedit_ai.self_subcommand.get_llm_config_dir")
 def test_cli_self_init(
-    mock_get_llm_config, mock_get_app_config, mock_is_initialized, mock_initialize, tmp_path: Path
+    mock_get_llm_config,
+    mock_get_app_config,
+    mock_is_initialized,
+    mock_initialize,
+    tmp_path: Path,
 ) -> None:
     """Test the self init subcommand."""
     # Setup mocks
@@ -362,7 +382,11 @@ def test_cli_self_init_already_initialized(
 @patch("copyedit_ai.self_subcommand.get_app_config_dir")
 @patch("copyedit_ai.self_subcommand.get_llm_config_dir")
 def test_cli_self_init_force(
-    mock_get_llm_config, mock_get_app_config, mock_is_initialized, mock_initialize, tmp_path: Path
+    mock_get_llm_config,
+    mock_get_app_config,
+    mock_is_initialized,
+    mock_initialize,
+    tmp_path: Path,
 ) -> None:
     """Test the self init subcommand with --force option."""
     # Setup mocks
@@ -388,7 +412,7 @@ def test_cli_self_init_import_system_config(
     mock_get_llm_config,
     mock_get_app_config,
     mock_is_initialized,
-    mock_initialize,
+    _mock_initialize,  # noqa: PT019
     mock_import,
     tmp_path: Path,
 ) -> None:
