@@ -178,8 +178,7 @@ def check_command(  # noqa: C901, PLR0912, PLR0915
             llm_user_path = os.environ.get("LLM_USER_PATH")
             if llm_user_path:
                 typer.echo(
-                    f"  Isolated config: Enabled "
-                    f"(LLM_USER_PATH={llm_user_path})"
+                    f"  Isolated config: Enabled (LLM_USER_PATH={llm_user_path})"
                 )
             else:
                 typer.echo("  Isolated config: Disabled")
