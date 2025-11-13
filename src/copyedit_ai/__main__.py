@@ -25,6 +25,34 @@ console = Console(stderr=True)
 
 app = typer.Typer()
 
+
+def _get_model_display_name(model_name: str) -> str:
+    """Get a short display name for a model (alias if available, otherwise model_id).
+
+    Args:
+        model_name: The model name or alias to lookup
+
+    Returns:
+        The shortest alias for the model, or the model_id if no alias exists
+
+    """
+    try:
+        models_with_aliases = llm.get_models_with_aliases()
+        for model_with_alias in models_with_aliases:
+            if model_with_alias.matches(model_name):
+                # Return first alias if available
+                # (aliases are usually sorted shortest first)
+                if model_with_alias.aliases:
+                    return model_with_alias.aliases[0]
+                # Fall back to model_id
+                return model_with_alias.model.model_id
+    except Exception:  # noqa: S110
+        # If anything goes wrong, just return the original name
+        pass
+
+    # Default: return the model_name as-is
+    return model_name
+
 # Register subcommands
 app.add_typer(
     self_cli,
@@ -61,8 +89,21 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
         typer.echo("Error: No input text provided", err=True)
         raise typer.Exit(1)
 
-    # Show startup message
-    console.print(f"[bold blue]Copyediting:[/bold blue] {source_name}")
+    # Show startup message with model info
+    # If model_name is None, get the actual default model that will be used
+    actual_model_name = model_name
+    if actual_model_name is None:
+        try:
+            default_model = llm.get_model()
+            actual_model_name = default_model.model_id
+        except Exception:
+            actual_model_name = "default"
+
+    model_display = _get_model_display_name(actual_model_name)
+    console.print(
+        f"[bold blue]Copyediting:[/bold blue] {source_name} "
+        f"[dim](model: {model_display})[/dim]"
+    )
 
     # Perform copyediting with spinner
     try:
