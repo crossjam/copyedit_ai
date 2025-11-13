@@ -614,6 +614,7 @@ copyedit_ai self keys path               # Show keys file path
 - [ ] Add debug/warning logging for attachment process
 
 ### Phase 2: Testing
+- [ ] Create separate test_ file for passthrough testing
 - [ ] Add unit test for command attachment verification
 - [ ] Add test for each passthrough command (basic invocation)
 - [ ] Add integration test for templates workflow
