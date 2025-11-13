@@ -722,3 +722,58 @@ def test_cli_replace_no_stream(mock_copyedit, tmp_path: Path) -> None:
     backup_path = tmp_path / "test.txt.bak"
     assert backup_path.exists()
     assert backup_path.read_text() == original_content
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_no_log_file_by_default(mock_copyedit, tmp_path: Path) -> None:
+    """Test that no log file is created by default."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Run in the tmp_path directory
+    import os  # noqa: PLC0415
+
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+        result = runner.invoke(cli, ["edit", str(test_file)])
+
+        assert result.exit_code == 0
+
+        # Verify no log file was created in the current directory
+        assert not (tmp_path / "copyedit_ai.log").exists()
+    finally:
+        os.chdir(original_cwd)
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_with_log_file_option(mock_copyedit, tmp_path: Path) -> None:
+    """Test that log file is created when --log-file is specified."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Specify log file path
+    log_file_path = tmp_path / "custom.log"
+
+    result = runner.invoke(
+        cli, ["--log-file", str(log_file_path), "edit", str(test_file)]
+    )
+
+    assert result.exit_code == 0, f"Output: {result.output}"
+
+    # Verify log file was created
+    assert log_file_path.exists()
+    log_content = log_file_path.read_text()
+    assert "Logging to file:" in log_content or "debug=" in log_content

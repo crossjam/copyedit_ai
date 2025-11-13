@@ -155,13 +155,28 @@ def main_callback(
         "-D",
         help="Enable debugging output.",
     ),
+    log_file: Path | None = typer.Option(
+        None,
+        "--log-file",
+        help="Path to log file. If not specified, logging to file is disabled.",
+    ),
 ) -> None:
     """Copyedit text from the CLI using AI"""
     ctx.obj = Settings()
     debug = debug or ctx.obj.debug
-    (logger.enable if debug else logger.disable)("copyedit_ai")
-    logger.add("copyedit_ai.log")
-    logger.info(f"{debug=}")
+
+    # Only add file logging if explicitly requested
+    log_path = log_file or ctx.obj.log_file
+
+    # Enable logging if debug mode or file logging is requested
+    if debug or log_path:
+        logger.enable("copyedit_ai")
+        if log_path:
+            logger.add(str(log_path))
+            logger.info(f"Logging to file: {log_path}")
+        logger.info(f"{debug=}")
+    else:
+        logger.disable("copyedit_ai")
 
 
 @app.command(name="edit")
