@@ -485,3 +485,125 @@ def test_cli_self_check_not_initialized(
     assert result.exit_code == 1
     assert "Configuration not initialized" in result.output
     assert "copyedit_ai self init" in result.output
+
+
+def test_cli_self_has_passthrough_commands() -> None:
+    """Test that llm passthrough commands are attached to self subcommand."""
+    import typer.main  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import (  # noqa: PLC0415
+        _attach_llm_passthroughs,
+        app,
+    )
+
+    # Convert to Click and check commands
+    click_group = typer.main.get_command(app)
+
+    # Attach the passthroughs
+    _attach_llm_passthroughs(click_group)
+
+    self_command = click_group.commands.get("self")
+    assert self_command is not None
+
+    # Verify passthrough commands exist
+    expected_commands = ["templates", "keys", "models", "schemas", "aliases"]
+    for cmd_name in expected_commands:
+        assert (
+            cmd_name in self_command.commands
+        ), f"Expected {cmd_name} in self commands"
+
+
+def test_cli_self_templates_help() -> None:
+    """Test that templates passthrough help works."""
+    import typer.main  # noqa: PLC0415
+    from click.testing import CliRunner as ClickRunner  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import _attach_llm_passthroughs  # noqa: PLC0415
+
+    # Convert to Click and attach passthroughs
+    click_group = typer.main.get_command(cli)
+    _attach_llm_passthroughs(click_group)
+
+    # Use Click's test runner for the Click group
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_group, ["self", "templates", "--help"])
+
+    # Should show help for templates command
+    assert result.exit_code == 0
+    assert "templates" in result.output.lower()
+
+
+def test_cli_self_keys_help() -> None:
+    """Test that keys passthrough help works."""
+    import typer.main  # noqa: PLC0415
+    from click.testing import CliRunner as ClickRunner  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import _attach_llm_passthroughs  # noqa: PLC0415
+
+    # Convert to Click and attach passthroughs
+    click_group = typer.main.get_command(cli)
+    _attach_llm_passthroughs(click_group)
+
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_group, ["self", "keys", "--help"])
+
+    # Should show help for keys command
+    assert result.exit_code == 0
+    assert "keys" in result.output.lower() or "api" in result.output.lower()
+
+
+def test_cli_self_models_help() -> None:
+    """Test that models passthrough help works."""
+    import typer.main  # noqa: PLC0415
+    from click.testing import CliRunner as ClickRunner  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import _attach_llm_passthroughs  # noqa: PLC0415
+
+    # Convert to Click and attach passthroughs
+    click_group = typer.main.get_command(cli)
+    _attach_llm_passthroughs(click_group)
+
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_group, ["self", "models", "--help"])
+
+    # Should show help for models command
+    assert result.exit_code == 0
+    assert "model" in result.output.lower()
+
+
+def test_cli_self_aliases_help() -> None:
+    """Test that aliases passthrough help works."""
+    import typer.main  # noqa: PLC0415
+    from click.testing import CliRunner as ClickRunner  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import _attach_llm_passthroughs  # noqa: PLC0415
+
+    # Convert to Click and attach passthroughs
+    click_group = typer.main.get_command(cli)
+    _attach_llm_passthroughs(click_group)
+
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_group, ["self", "aliases", "--help"])
+
+    # Should show help for aliases command
+    assert result.exit_code == 0
+    assert "alias" in result.output.lower()
+
+
+def test_cli_self_schemas_help() -> None:
+    """Test that schemas passthrough help works."""
+    import typer.main  # noqa: PLC0415
+    from click.testing import CliRunner as ClickRunner  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import _attach_llm_passthroughs  # noqa: PLC0415
+
+    # Convert to Click and attach passthroughs
+    click_group = typer.main.get_command(cli)
+    _attach_llm_passthroughs(click_group)
+
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_group, ["self", "schemas", "--help"])
+
+    # Should show help for schemas command
+    assert result.exit_code == 0
+    assert "schema" in result.output.lower()

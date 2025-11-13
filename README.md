@@ -6,7 +6,25 @@
 
 ## Features
 
-<!-- project features --> 
+<!-- project features -->
+
+### Core Functionality
+- Copyedit text using AI models via the command line
+- Support for multiple LLM providers through the `llm` library
+- Stream responses as they're generated or get complete responses
+- Read from files or stdin
+
+### LLM Configuration Management
+
+Manage your isolated LLM configuration directly through copyedit_ai:
+
+- `copyedit_ai self keys` - Manage API keys for different model providers
+- `copyedit_ai self templates` - Manage prompt templates
+- `copyedit_ai self models` - List and configure available models
+- `copyedit_ai self aliases` - Create shortcuts for frequently used models
+- `copyedit_ai self schemas` - Manage stored schemas
+
+All commands operate within copyedit_ai's isolated configuration directory, preventing conflicts with system-wide llm installations. 
 
 ## Installation
 

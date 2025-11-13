@@ -127,6 +127,52 @@ def edit_command(
     _perform_copyedit(settings, file_path, model, stream)
 
 
+def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
+    """Attach llm's command groups to the 'self' subcommand.
+
+    This allows users to access llm's native commands within copyedit_ai's
+    isolated configuration context.
+
+    Args:
+        main_group: The main Click group (converted from Typer app)
+
+    """
+    try:
+        from llm.cli import cli as llm_cli  # noqa: PLC0415
+    except ImportError:
+        logger.warning("Could not import llm.cli for passthrough commands")
+        return
+
+    # Get the 'self' subcommand (it's also a Click group)
+    self_command = main_group.commands.get("self")
+    if not self_command:
+        logger.warning("Could not find 'self' subcommand for llm passthrough")
+        return
+
+    # List of llm commands to pass through
+    passthrough_commands = [
+        "templates",  # Manage prompt templates
+        "keys",  # Manage API keys
+        "models",  # List and configure models
+        "schemas",  # Manage stored schemas
+        "aliases",  # Manage model aliases
+    ]
+
+    # Attach each command group
+    for cmd_name in passthrough_commands:
+        # Don't override existing commands
+        if cmd_name in self_command.commands:
+            logger.debug(f"Skipping llm command {cmd_name} - already exists")
+            continue
+
+        llm_command = llm_cli.commands.get(cmd_name)
+        if llm_command:
+            self_command.add_command(llm_command, name=cmd_name)
+            logger.debug(f"Attached llm command: {cmd_name}")
+        else:
+            logger.warning(f"Could not find llm command: {cmd_name}")
+
+
 def cli() -> None:
     """CLI entry point with default command support."""
     click_group = typer.main.get_command(app)
@@ -137,6 +183,10 @@ def cli() -> None:
     default_group = cast("DefaultGroup", click_group)
     default_group.default_cmd_name = "edit"
     default_group.default_if_no_args = True
+
+    # Attach llm passthrough commands to 'self' subcommand
+    _attach_llm_passthroughs(default_group)
+
     default_group()
 
 
