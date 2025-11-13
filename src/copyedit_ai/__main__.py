@@ -5,7 +5,9 @@ Copyedit text from the CLI using AI
 
 import sys
 from pathlib import Path
+from typing import cast
 
+import llm
 import typer
 import typer.main
 from click_default_group import DefaultGroup
@@ -62,6 +64,8 @@ def _perform_copyedit(
             typer.echo()  # Final newline
         else:
             # Output complete response
+            # Type assertion: in non-streaming mode, response is always Response
+            assert isinstance(response, llm.Response)  # noqa: S101
             typer.echo(response.text())
     except Exception as e:
         logger.exception("Error during copyediting")
@@ -128,9 +132,12 @@ def cli() -> None:
     click_group = typer.main.get_command(app)
     # Replace the group class with DefaultGroup
     click_group.__class__ = DefaultGroup
-    click_group.default_cmd_name = "edit"
-    click_group.default_if_no_args = True
-    click_group()
+
+    # Cast to tell type checker about the new type
+    default_group = cast("DefaultGroup", click_group)
+    default_group.default_cmd_name = "edit"
+    default_group.default_if_no_args = True
+    default_group()
 
 
 if __name__ == "__main__":
