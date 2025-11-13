@@ -14,10 +14,14 @@ import typer
 import typer.main
 from click_default_group import DefaultGroup
 from loguru import logger
+from rich.console import Console
+from rich.status import Status
 
 from .copyedit import copyedit
 from .self_subcommand import cli as self_cli
 from .settings import Settings
+
+console = Console(stderr=True)
 
 app = typer.Typer()
 
@@ -44,6 +48,7 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
     model_name = model or settings.default_model
 
     # Read input text
+    source_name = str(file_path) if file_path else "stdin"
     if file_path:
         logger.info(f"Reading from file: {file_path}")
         text = file_path.read_text()
@@ -56,23 +61,50 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
         typer.echo("Error: No input text provided", err=True)
         raise typer.Exit(1)
 
-    # Perform copyediting
+    # Show startup message
+    console.print(f"[bold blue]Copyediting:[/bold blue] {source_name}")
+
+    # Perform copyediting with spinner
     try:
-        response = copyedit(text, model_name=model_name, stream=stream)
+        status = Status(
+            "[bold green]Generating copyedited version...",
+            console=console,
+            spinner="dots",
+        )
+        status.start()
+
+        try:
+            response = copyedit(text, model_name=model_name, stream=stream)
+        finally:
+            # For replace mode, we'll stop the spinner later
+            # For non-replace streaming, we'll stop when first chunk arrives
+            # For non-replace non-streaming, we'll stop it now
+            if not replace and not stream:
+                status.stop()
 
         # Collect the output
         output_text = ""
         if stream:
             # Stream output and collect it
             chunks = []
+            first_chunk = True
             for chunk in response:
+                # Stop spinner on first chunk for non-replace mode
+                if first_chunk and not replace:
+                    status.stop()
+                    first_chunk = False
+
                 chunks.append(chunk)
                 if not replace:
                     # Only print to stdout if not replacing
                     typer.echo(chunk, nl=False)
+
             output_text = "".join(chunks)
             if not replace:
                 typer.echo()  # Final newline
+            else:
+                # Stop spinner after collecting all chunks in replace mode
+                status.stop()
         else:
             # Output complete response
             # Type assertion: in non-streaming mode, response is always Response
@@ -80,6 +112,9 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
             output_text = response.text()
             if not replace:
                 typer.echo(output_text)
+            else:
+                # Stop spinner after getting response in replace mode
+                status.stop()
 
         # Handle replace mode
         if replace:

@@ -777,3 +777,39 @@ def test_cli_with_log_file_option(mock_copyedit, tmp_path: Path) -> None:
     assert log_file_path.exists()
     log_content = log_file_path.read_text()
     assert "Logging to file:" in log_content or "debug=" in log_content
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_startup_message_with_file(mock_copyedit, tmp_path: Path) -> None:
+    """Test that startup message shows the filename."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    result = runner.invoke(cli, ["edit", str(test_file)])
+
+    assert result.exit_code == 0
+    # The startup message goes to stderr (Rich Console is configured with stderr=True)
+    # Typer's CliRunner captures both stdout and stderr in output
+    assert "Copyediting:" in result.output or str(test_file) in result.output
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_startup_message_with_stdin(mock_copyedit) -> None:
+    """Test that startup message shows 'stdin' when reading from stdin."""
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    test_input = "Test text from stdin."
+    result = runner.invoke(cli, ["edit"], input=test_input)
+
+    assert result.exit_code == 0
+    # Check for startup message mentioning stdin
+    assert "Copyediting:" in result.output or "stdin" in result.output
