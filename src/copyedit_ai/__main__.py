@@ -73,14 +73,7 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
         )
         status.start()
 
-        try:
-            response = copyedit(text, model_name=model_name, stream=stream)
-        finally:
-            # For replace mode, we'll stop the spinner later
-            # For non-replace streaming, we'll stop when first chunk arrives
-            # For non-replace non-streaming, we'll stop it now
-            if not replace and not stream:
-                status.stop()
+        response = copyedit(text, model_name=model_name, stream=stream)
 
         # Collect the output
         output_text = ""
@@ -110,11 +103,10 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
             # Type assertion: in non-streaming mode, response is always Response
             assert isinstance(response, llm.Response)  # noqa: S101
             output_text = response.text()
+            # Stop spinner after API call completes
+            status.stop()
             if not replace:
                 typer.echo(output_text)
-            else:
-                # Stop spinner after getting response in replace mode
-                status.stop()
 
         # Handle replace mode
         if replace:
