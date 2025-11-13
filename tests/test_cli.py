@@ -607,3 +607,118 @@ def test_cli_self_schemas_help() -> None:
     # Should show help for schemas command
     assert result.exit_code == 0
     assert "schema" in result.output.lower()
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_replace_with_confirmation(mock_copyedit, tmp_path: Path) -> None:
+    """Test the --replace option with user confirmation."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    original_content = "Test text with erors."
+    test_file.write_text(original_content)
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(
+        return_value=iter(["Test text with errors."])
+    )
+    mock_copyedit.return_value = mock_response
+
+    # Simulate user confirming the replacement
+    result = runner.invoke(cli, ["edit", str(test_file), "--replace"], input="y\n")
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify the file was replaced
+    assert test_file.read_text() == "Test text with errors."
+
+    # Verify backup was created
+    backup_path = tmp_path / "test.txt.bak"
+    assert backup_path.exists()
+    assert backup_path.read_text() == original_content
+
+    # Check output messages
+    assert "Replace the original file" in result.output
+    assert "File replaced successfully" in result.output
+    assert "Backup saved to" in result.output
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_replace_with_cancellation(mock_copyedit, tmp_path: Path) -> None:
+    """Test the --replace option with user cancellation."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    original_content = "Test text with erors."
+    test_file.write_text(original_content)
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(
+        return_value=iter(["Test text with errors."])
+    )
+    mock_copyedit.return_value = mock_response
+
+    # Simulate user cancelling the replacement
+    result = runner.invoke(cli, ["edit", str(test_file), "--replace"], input="n\n")
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify the original file was not changed
+    assert test_file.read_text() == original_content
+
+    # Verify no backup was created
+    backup_path = tmp_path / "test.txt.bak"
+    assert not backup_path.exists()
+
+    # Check output messages
+    assert "Replacement cancelled" in result.output
+    assert "Copyedited version saved in" in result.output
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_replace_with_stdin_error(mock_copyedit) -> None:
+    """Test that --replace with stdin input produces an error."""
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(
+        return_value=iter(["Test text with errors."])
+    )
+    mock_copyedit.return_value = mock_response
+
+    test_input = "Test text with erors."
+    result = runner.invoke(cli, ["edit", "--replace"], input=test_input)
+
+    assert result.exit_code == 1
+    assert "--replace requires a file argument" in result.output
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_replace_no_stream(mock_copyedit, tmp_path: Path) -> None:
+    """Test the --replace option with --no-stream."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    original_content = "Test text with erors."
+    test_file.write_text(original_content)
+
+    # Mock the copyedit response for non-streaming
+    mock_response = create_autospec(llm.Response, instance=True)
+    mock_response.text.return_value = "Test text with errors."
+    mock_copyedit.return_value = mock_response
+
+    # Simulate user confirming the replacement
+    result = runner.invoke(
+        cli, ["edit", str(test_file), "--replace", "--no-stream"], input="y\n"
+    )
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify the file was replaced
+    assert test_file.read_text() == "Test text with errors."
+
+    # Verify backup was created
+    backup_path = tmp_path / "test.txt.bak"
+    assert backup_path.exists()
+    assert backup_path.read_text() == original_content

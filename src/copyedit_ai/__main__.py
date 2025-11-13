@@ -3,7 +3,9 @@
 Copyedit text from the CLI using AI
 """
 
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import cast
 
@@ -27,11 +29,12 @@ app.add_typer(
 )
 
 
-def _perform_copyedit(
+def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
     settings: Settings,
     file_path: Path | None,
     model: str | None,
     stream: bool,
+    replace: bool,
 ) -> None:
     """Perform copyediting operation.
 
@@ -57,16 +60,86 @@ def _perform_copyedit(
     try:
         response = copyedit(text, model_name=model_name, stream=stream)
 
+        # Collect the output
+        output_text = ""
         if stream:
-            # Stream output
+            # Stream output and collect it
+            chunks = []
             for chunk in response:
-                typer.echo(chunk, nl=False)
-            typer.echo()  # Final newline
+                chunks.append(chunk)
+                if not replace:
+                    # Only print to stdout if not replacing
+                    typer.echo(chunk, nl=False)
+            output_text = "".join(chunks)
+            if not replace:
+                typer.echo()  # Final newline
         else:
             # Output complete response
             # Type assertion: in non-streaming mode, response is always Response
             assert isinstance(response, llm.Response)  # noqa: S101
-            typer.echo(response.text())
+            output_text = response.text()
+            if not replace:
+                typer.echo(output_text)
+
+        # Handle replace mode
+        if replace:
+            if not file_path:
+                logger.error("Cannot use --replace with stdin input")
+                typer.echo(
+                    "Error: --replace requires a file argument, not stdin",
+                    err=True,
+                )
+                raise typer.Exit(1)  # noqa: TRY301
+
+            # Write to secure temporary file
+            temp_fd, temp_path_str = tempfile.mkstemp(
+                suffix=file_path.suffix,
+                prefix=f"{file_path.stem}_copyedit_",
+                text=True,
+            )
+            import os  # noqa: PLC0415
+
+            os.close(temp_fd)  # Close fd, we'll use Path.open() instead
+            temp_path = Path(temp_path_str)
+            try:
+                with temp_path.open("w") as temp_file:
+                    temp_file.write(output_text)
+
+                logger.info(f"Wrote copyedited content to temporary file: {temp_path}")
+
+                # Prompt user for confirmation
+                typer.echo(f"\nCopyedited content written to: {temp_path}")
+                typer.echo(f"Original file: {file_path}")
+                confirm = typer.confirm(
+                    "\nReplace the original file with the copyedited version?",
+                    default=False,
+                )
+
+                if confirm:
+                    # Create backup of original file
+                    backup_path = file_path.with_suffix(file_path.suffix + ".bak")
+                    shutil.copy2(file_path, backup_path)
+                    logger.info(f"Created backup: {backup_path}")
+
+                    # Replace original with temp file
+                    shutil.copy2(temp_path, file_path)
+                    logger.info(f"Replaced {file_path} with copyedited version")
+
+                    typer.secho(
+                        f"✓ File replaced successfully. Backup saved to: {backup_path}",
+                        fg=typer.colors.GREEN,
+                    )
+                else:
+                    typer.echo(
+                        f"Replacement cancelled. "
+                        f"Copyedited version saved in: {temp_path}"
+                    )
+                    logger.info("User cancelled replacement")
+            except Exception as e:
+                logger.exception("Error during file replacement")
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
+
     except Exception as e:
         logger.exception("Error during copyediting")
         typer.echo(f"Error: {e}", err=True)
@@ -111,6 +184,12 @@ def edit_command(
         "--stream/--no-stream",
         help="Stream the response as it's generated.",
     ),
+    replace: bool = typer.Option(
+        False,
+        "--replace",
+        "-r",
+        help="Replace the original file after confirmation. Creates a .bak backup.",
+    ),
 ) -> None:
     """Copyedit text using AI.
 
@@ -121,10 +200,11 @@ def edit_command(
         copyedit_ai < draft.txt
         copyedit_ai draft.txt
         cat draft.txt | copyedit_ai -m claude-opus
+        copyedit_ai draft.txt --replace
 
     """
     settings: Settings = ctx.obj
-    _perform_copyedit(settings, file_path, model, stream)
+    _perform_copyedit(settings, file_path, model, stream, replace)
 
 
 def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
