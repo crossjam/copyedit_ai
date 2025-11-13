@@ -688,3 +688,236 @@ copyedit_ai self keys path               # Show keys file path
 **End of Plan**
 
 This plan provides a comprehensive roadmap for implementing llm command passthrough while maintaining code quality, testability, and user experience. The approach is extensible and maintainable for future enhancements.
+
+---
+
+## Implementation Summary
+
+**Date:** 2025-11-13
+
+### Overview
+
+The LLM passthrough feature was successfully implemented along with several UX enhancements to the `edit` command. All planned functionality is working as expected with comprehensive test coverage.
+
+### Commits
+
+1. **caffa27** - Add llm passthrough commands to copyedit_ai self
+2. **33ffdbf** - Add --replace flag for in-place file editing with confirmation
+3. **d39150b** - Disable default log file creation, make it opt-in
+4. **235f9f9** - Add startup message and spinner to edit command
+5. **4446f7f** - Fix spinner timing in non-streaming mode
+6. **b65cc55** - Add model name to startup message with alias support
+7. **9fe54fb** - Remove redundant install-template and install-alias commands
+
+### Implementation Details
+
+#### 1. LLM Passthrough Commands (caffa27)
+
+**Core Implementation:**
+- Added `_attach_llm_passthroughs()` function in `src/copyedit_ai/__main__.py` (lines 293-337)
+- Imports `llm.cli` dynamically and attaches 5 command groups to the `self` subcommand:
+  - `templates` - Manage prompt templates
+  - `keys` - Manage API keys
+  - `models` - List and configure models
+  - `schemas` - Manage stored schemas
+  - `aliases` - Manage model aliases
+- Includes collision detection to avoid overriding existing commands
+- Added comprehensive error handling with logging
+
+**Testing:**
+- Added 6 tests for passthrough functionality:
+  - `test_cli_self_has_passthrough_commands` - Verifies commands are attached
+  - 5 help text tests using Click's CliRunner for each passthrough command group
+- All tests use proper mocking and Click integration (not Typer's CliRunner)
+
+**Files Modified:**
+- `src/copyedit_ai/__main__.py` - Added passthrough attachment logic
+- `tests/test_cli.py` - Added passthrough tests
+- `README.md` - Added LLM Configuration Management section
+
+#### 2. Replace Flag Feature (33ffdbf)
+
+**Implementation:**
+- Added `--replace/-r` flag to `edit` command
+- Creates secure temporary file using `tempfile.mkstemp()`
+- Interactive confirmation prompt before replacing original file
+- Automatic `.bak` backup creation
+- Error handling for stdin input (requires file path)
+- Modified `_perform_copyedit()` to handle output collection and replacement logic (lines 120-176)
+
+**Testing:**
+- Added 4 tests for replace functionality:
+  - `test_cli_replace_with_confirmation` - Tests successful replacement with backup
+  - `test_cli_replace_with_cancellation` - Tests user cancellation
+  - `test_cli_replace_with_stdin_error` - Tests error when stdin used with --replace
+  - `test_cli_replace_no_stream` - Tests replace mode with --no-stream
+
+**User Experience:**
+```bash
+$ copyedit_ai edit --replace file.txt
+# Prompt: Replace the original file with the copyedited version? [y/N]
+✓ File replaced successfully. Backup saved to: file.txt.bak
+```
+
+#### 3. Disable Default Logging (d39150b)
+
+**Implementation:**
+- Added `log_file: Path | None = None` to `Settings` class
+- Added `--log-file` command-line option to `main_callback()`
+- Made `logger.add()` conditional on `log_file` being specified
+- Logger only enabled when debug mode OR log file is requested
+- Removed automatic `logger.add("copyedit_ai.log")` call
+
+**Testing:**
+- Added 2 tests:
+  - `test_cli_no_log_file_by_default` - Verifies no log file created by default
+  - `test_cli_with_log_file_option` - Verifies log file created when specified
+
+**Files Modified:**
+- `src/copyedit_ai/settings.py` - Added log_file setting
+- `src/copyedit_ai/__main__.py` - Added conditional logging setup
+
+#### 4. Startup Message and Spinner (235f9f9)
+
+**Implementation:**
+- Added `rich` dependency to `pyproject.toml`
+- Created `console = Console(stderr=True)` to avoid interfering with stdout (line 24)
+- Added startup message showing source filename or "stdin" (line 65)
+- Added Status spinner with "Generating copyedited version..." message
+- Smart spinner stopping logic:
+  - Non-streaming, non-replace: stops after response received
+  - Streaming, non-replace: stops on first chunk
+  - Replace mode: stops after all content collected
+
+**Testing:**
+- Added 2 tests:
+  - `test_cli_startup_message_with_file` - Tests file message
+  - `test_cli_startup_message_with_stdin` - Tests stdin message
+
+**User Experience:**
+```bash
+$ copyedit_ai edit file.txt
+Copyediting: file.txt
+⠋ Generating copyedited version...
+```
+
+#### 5. Fix Spinner Timing (4446f7f)
+
+**Problem:** In non-streaming mode, `copyedit()` returns a Response object immediately, but the actual API call doesn't happen until `response.text()` is called. The spinner was being stopped before the API call.
+
+**Solution:**
+- Removed the `finally` block that was stopping spinner too early
+- Moved `status.stop()` to after `response.text()` completes (line 107)
+- Ensures spinner is visible during the entire API call duration
+
+**Files Modified:**
+- `src/copyedit_ai/__main__.py` - Adjusted spinner timing logic (lines 76-109)
+
+#### 6. Model Name in Startup Message (b65cc55)
+
+**Implementation:**
+- Added `_get_model_display_name()` function (lines 29-52) that:
+  - Uses `llm.get_models_with_aliases()` to find models with short aliases
+  - Returns the first (shortest) alias if available (e.g., "4o-mini" instead of "gpt-4o-mini")
+  - Falls back to full `model_id` if no alias exists
+  - Gracefully handles errors
+- Updated startup message to resolve `None` model names to llm's actual default model
+- Displays model in dimmed text after filename: `(model: 4o-mini)`
+
+**User Experience:**
+```bash
+$ copyedit_ai edit --no-stream file.txt
+Copyediting: file.txt (model: 4o-mini)
+⠋ Generating copyedited version...
+```
+
+**Files Modified:**
+- `src/copyedit_ai/__main__.py` - Added model display name logic
+
+#### 7. Remove Redundant Commands (9fe54fb)
+
+**Rationale:** With the llm passthrough commands working, the custom `install-template` and `install-alias` commands became redundant:
+- `install-alias` duplicated `copyedit_ai self aliases set` with fewer features
+- `install-template` duplicated functionality available through `copyedit_ai self templates edit`
+
+**Changes:**
+- Removed `install-template` command and its 5 tests (119 lines from self_subcommand.py)
+- Removed `install-alias` command and its 3 tests (189 lines from test_cli.py)
+- Removed unused imports: `yaml`, `llm`, `set_llm_user_path`, `SYSTEM_PROMPT`
+- Updated `init` command help text to reference native llm commands:
+  - `copyedit_ai self keys set <provider>`
+  - `copyedit_ai self aliases set <alias> <model>`
+  - `copyedit_ai self templates edit <name>`
+
+**Impact:**
+- Total deletions: 307 lines
+- Total additions: 3 lines
+- Test count reduced from 38 to 30 CLI tests (46 total including other test files)
+- Cleaner, more maintainable codebase
+- Users get full llm command functionality
+
+### Final State
+
+**Available Commands:**
+```bash
+$ copyedit_ai self --help
+Commands:
+  version    Retrieve the package version
+  init       Initialize copyedit_ai configuration directory
+  check      Check copyedit_ai configuration status
+  templates  Manage stored prompt templates
+  keys       Manage stored API keys for different models
+  models     Manage available models
+  schemas    Manage stored schemas
+  aliases    Manage model aliases
+```
+
+**Test Coverage:**
+- 30 CLI tests (all passing)
+- 5 copyedit tests
+- 11 user_dir tests (1 skipped)
+- **Total: 46 tests passing, 1 skipped**
+
+**Code Quality:**
+- All linter checks passing (ruff)
+- No type errors
+- Clean imports and dependencies
+- Proper error handling throughout
+
+### Success Metrics
+
+✅ All five llm command groups accessible via `copyedit_ai self`
+✅ Commands use isolated configuration (via `LLM_USER_PATH`)
+✅ Commands appear in help text with proper documentation
+✅ Comprehensive test coverage
+✅ Clean code with no linter errors
+✅ Enhanced UX with spinner, startup message, and model display
+✅ Flexible file editing with --replace flag
+✅ Opt-in logging (no default log files)
+✅ Reduced code duplication by removing redundant commands
+
+### Documentation Updates
+
+**README.md:**
+- Added "LLM Configuration Management" section listing all passthrough commands
+- Documents that commands operate within isolated configuration
+
+**Code Documentation:**
+- Added comprehensive docstrings to all new functions
+- Inline comments explaining complex logic (spinner timing, model resolution)
+- Clear parameter descriptions and return types
+
+### Known Issues / Future Enhancements
+
+**None currently identified.** The implementation is stable and working as designed.
+
+**Potential Future Enhancements:**
+1. Add configuration file support for customizing which llm commands to pass through
+2. Add version compatibility checking with llm package
+3. Consider adding more llm commands (logs, embed, similar) based on user feedback
+4. Add middleware capability to inject copyedit_ai-specific behavior into passthrough commands
+
+---
+
+**Implementation Complete**
+All features from the original plan have been successfully implemented and tested. The codebase is production-ready with excellent test coverage and code quality.
