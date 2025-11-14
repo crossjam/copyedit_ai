@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     default_model: str | None = None  # Uses llm's default if None
     use_isolated_llm_config: bool = True  # Use isolated LLM configuration
     llm_config_path: Path | None = None  # Override path for LLM config
+    log_file: Path | None = None  # Path to log file (disabled by default)
 
     @model_validator(mode="after")
     def setup_llm_config(self) -> "Settings":

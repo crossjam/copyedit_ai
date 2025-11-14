@@ -10,18 +10,14 @@ import shutil
 from importlib.metadata import version
 from pathlib import Path
 
-import llm
 import typer
-import yaml
 from loguru import logger
 
-from .copyedit import SYSTEM_PROMPT
 from .user_dir import (
     get_app_config_dir,
     get_llm_config_dir,
     initialize,
     is_initialized,
-    set_llm_user_path,
 )
 
 cli = typer.Typer()
@@ -93,8 +89,9 @@ def init_command(
         typer.echo(f"  Location: {app_config_dir}")
         typer.echo(f"  LLM config: {llm_config_dir}")
         typer.echo("\nConfiguration is ready. You can now:")
-        typer.echo("  - Install templates: copyedit_ai self install-template")
-        typer.echo("  - Create aliases: copyedit_ai self install-alias <alias> <model>")
+        typer.echo("  - Manage API keys: copyedit_ai self keys set <provider>")
+        typer.echo("  - Create aliases: copyedit_ai self aliases set <alias> <model>")
+        typer.echo("  - Edit templates: copyedit_ai self templates edit <name>")
 
     except Exception as error:
         logger.exception("Failed to initialize configuration")
@@ -233,115 +230,3 @@ def check_command(  # noqa: C901, PLR0912, PLR0915
         raise typer.Exit(1) from None
 
 
-@cli.command(name="install-template")
-def install_template(
-    name: str = typer.Argument("copyedit", help="Name for the template"),
-    force: bool = typer.Option(
-        False,
-        "--force",
-        "-f",
-        help="Overwrite existing template if it exists",
-    ),
-) -> None:
-    """Install a copyedit prompt template for use with llm.
-
-    This creates a template that can be used with the llm CLI tool:
-
-        llm -t copyedit "Your text here"
-
-    The template includes the copyedit system prompt and is stored
-    in the llm templates directory.
-    """
-    try:
-        # Check if configuration is initialized
-        if not is_initialized():
-            logger.error("Configuration not initialized")
-            typer.echo("Error: Configuration not initialized.", err=True)
-            typer.echo("Run 'copyedit_ai self init' first.", err=True)
-            raise typer.Exit(1)  # noqa: TRY301
-
-        # Set LLM user path to use isolated config
-        set_llm_user_path()
-
-        # Get the templates directory from llm
-        templates_dir = Path(llm.user_dir()) / "templates"
-        templates_dir.mkdir(parents=True, exist_ok=True)
-
-        template_path = templates_dir / f"{name}.yaml"
-
-        # Check if template already exists
-        if template_path.exists() and not force:
-            logger.error(f"Template '{name}' already exists at {template_path}")
-            typer.echo(
-                f"Error: Template '{name}' already exists. Use --force to overwrite.",
-                err=True,
-            )
-            raise typer.Exit(1)  # noqa: TRY301
-
-        # Create the template
-        template_content = {
-            "system": SYSTEM_PROMPT.strip(),
-            "prompt": "Copy edit the text that follows:\n\n$input",
-        }
-
-        # Write the template file
-        with template_path.open("w") as f:
-            yaml.dump(template_content, f, default_flow_style=False, sort_keys=False)
-
-        logger.info(f"Created template '{name}' at {template_path}")
-        typer.secho(f"✓ Installed template '{name}'", fg=typer.colors.GREEN)
-        typer.echo(f"  Location: {template_path}")
-        typer.echo(f"\nUsage: llm -t {name} 'Your text here'")
-        typer.echo(f"       llm -t {name} --param input 'Your text here'")
-        typer.echo(f"       cat file.txt | llm -t {name} --param input -")
-
-    except Exception as error:
-        logger.exception("Failed to install template")
-        typer.echo(f"Error: {error}", err=True)
-        raise typer.Exit(1) from None
-
-
-@cli.command(name="install-alias")
-def install_alias(
-    alias: str = typer.Argument(..., help="Alias name to create"),
-    model_id: str = typer.Argument(..., help="Model ID to alias"),
-) -> None:
-    """Install a model alias for use with llm.
-
-    This creates an alias that can be used as a shortcut for a model:
-
-        copyedit_ai self install-alias fast gpt-4o-mini
-        copyedit_ai -m fast "Your text"
-
-    Examples:
-        copyedit_ai self install-alias fast gpt-4o-mini
-        copyedit_ai self install-alias smart claude-3-5-sonnet-20241022
-        copyedit_ai self install-alias cheap gpt-3.5-turbo
-
-    """
-    try:
-        # Check if configuration is initialized
-        if not is_initialized():
-            logger.error("Configuration not initialized")
-            typer.echo("Error: Configuration not initialized.", err=True)
-            typer.echo("Run 'copyedit_ai self init' first.", err=True)
-            raise typer.Exit(1)  # noqa: TRY301
-
-        # Set LLM user path to use isolated config
-        set_llm_user_path()
-
-        # Set the alias using llm's API
-        llm.set_alias(alias, model_id)
-
-        logger.info(f"Created alias '{alias}' -> '{model_id}'")
-        typer.secho(
-            f"✓ Installed alias '{alias}' -> '{model_id}'",
-            fg=typer.colors.GREEN,
-        )
-        typer.echo(f"\nUsage: copyedit_ai -m {alias} 'Your text here'")
-        typer.echo(f"       llm -m {alias} 'Your prompt'")
-
-    except Exception as error:
-        logger.exception("Failed to install alias")
-        typer.echo(f"Error: {error}", err=True)
-        raise typer.Exit(1) from None
