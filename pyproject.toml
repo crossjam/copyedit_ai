@@ -12,6 +12,7 @@ dependencies = [
     "loguru",
     "typer",
     "pydantic_settings",
+    "rich",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
