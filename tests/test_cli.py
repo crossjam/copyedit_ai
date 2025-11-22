@@ -20,6 +20,29 @@ def test_cli_help() -> None:
     assert result.exit_code == 0
 
 
+def test_cli_entry_points_exist() -> None:
+    """Test that both copyedit and copyedit_ai entry points are defined."""
+    import tomllib  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
+
+    # Read pyproject.toml
+    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    with pyproject_path.open("rb") as f:
+        pyproject = tomllib.load(f)
+
+    # Check that both entry points exist
+    scripts = pyproject["project"]["scripts"]
+    assert "copyedit_ai" in scripts, "copyedit_ai entry point should exist"
+    assert "copyedit" in scripts, "copyedit entry point should exist"
+
+    # Verify both point to the same function
+    assert scripts["copyedit_ai"] == "copyedit_ai.__main__:cli"
+    assert scripts["copyedit"] == "copyedit_ai.__main__:cli"
+    assert scripts["copyedit"] == scripts["copyedit_ai"], (
+        "Both entry points should point to the same function"
+    )
+
+
 def test_cli_self_no_arguments() -> None:
     """Test the self subcommand with no arguments."""
     result = runner.invoke(cli, ["self"])
