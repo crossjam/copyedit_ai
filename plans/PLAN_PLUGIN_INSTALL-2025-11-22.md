@@ -304,11 +304,11 @@ environment to avoid polluting the test environment.
 
 ### Manual Testing Checklist
 
-- [ ] `copyedit_ai self --help` shows install, uninstall, and plugins commands
-- [ ] `copyedit_ai self install --help` displays llm's install help
-- [ ] `copyedit_ai self uninstall --help` displays llm's uninstall help
-- [ ] `copyedit_ai self plugins --help` displays llm's plugins help
-- [ ] `copyedit_ai self plugins list` executes successfully
+- [x] `copyedit_ai self --help` shows install, uninstall, and plugins commands
+- [x] `copyedit_ai self install --help` displays llm's install help
+- [x] `copyedit_ai self uninstall --help` displays llm's uninstall help
+- [x] `copyedit_ai self plugins --help` displays llm's plugins help
+- [x] `copyedit_ai self plugins list` executes successfully
 - [ ] `copyedit_ai self install llm-anthropic` installs plugin (if network available)
 - [ ] After installation, `copyedit_ai self models list` shows new models
 - [ ] After installation, `copyedit_ai self plugins list` shows installed plugin
@@ -539,41 +539,41 @@ passthrough_commands = [
 ## Implementation Checklist
 
 ### Code Changes
-- [ ] Update `passthrough_commands` list in `src/copyedit_ai/__main__.py` (line 316)
-- [ ] Add three items: `"install"`, `"uninstall"`, `"plugins"`
-- [ ] Verify proper inline comments for new commands
+- [x] Update `passthrough_commands` list in `src/copyedit_ai/__main__.py` (line 316)
+- [x] Add three items: `"install"`, `"uninstall"`, `"plugins"`
+- [x] Verify proper inline comments for new commands
 
 ### Testing
-- [ ] Add `test_self_has_plugin_passthrough_commands()` to `tests/test_cli.py`
-- [ ] Add `test_self_install_help()` to `tests/test_cli.py`
-- [ ] Add `test_self_uninstall_help()` to `tests/test_cli.py`
-- [ ] Add `test_self_plugins_help()` to `tests/test_cli.py`
-- [ ] Run full test suite: `poe test`
-- [ ] Verify all tests pass
+- [x] Add `test_self_has_plugin_passthrough_commands()` to `tests/test_cli.py`
+- [x] Add `test_self_install_help()` to `tests/test_cli.py`
+- [x] Add `test_self_uninstall_help()` to `tests/test_cli.py`
+- [x] Add `test_self_plugins_help()` to `tests/test_cli.py`
+- [x] Run full test suite: `poe test`
+- [x] Verify all tests pass
 
 ### Quality Assurance
-- [ ] Run linter: `poe ruff-check`
-- [ ] Run formatter: `poe ruff`
-- [ ] Run type checker: `poe ty`
-- [ ] Verify no new issues introduced
+- [x] Run linter: `poe ruff-check`
+- [x] Run formatter: `poe ruff`
+- [x] Run type checker: `poe ty`
+- [x] Verify no new issues introduced
 
 ### Documentation
-- [ ] Update README.md with plugin installation examples
-- [ ] Add "Installing Model Providers" section to docs/getting-started/configuration.md
-- [ ] Update CHANGELOG.md with new feature
-- [ ] Add docstring examples if needed
+- [x] Update README.md with plugin installation examples
+- [x] Add "Installing Model Providers" section to docs/getting-started/configuration.md
+- [x] Update CHANGELOG.md with new feature
+- [x] Add docstring examples if needed
 
 ### Manual Testing
-- [ ] Verify `copyedit_ai self --help` shows new commands
-- [ ] Test `copyedit_ai self install --help`
-- [ ] Test `copyedit_ai self uninstall --help`
-- [ ] Test `copyedit_ai self plugins --help`
-- [ ] Test `copyedit_ai self plugins list`
+- [x] Verify `copyedit_ai self --help` shows new commands
+- [x] Test `copyedit_ai self install --help`
+- [x] Test `copyedit_ai self uninstall --help`
+- [x] Test `copyedit_ai self plugins --help`
+- [x] Test `copyedit_ai self plugins list`
 - [ ] (Optional) Test actual plugin installation: `copyedit_ai self install llm-claude`
 
 ### Git Operations
-- [ ] Commit changes with descriptive message
-- [ ] Push to feature branch: `claude/rebase-plugins-plan-issue-01QYVSZGvcn3XMCEBSLrYDfc`
+- [x] Commit changes with descriptive message
+- [x] Push to feature branch: `claude/rebase-plugins-plan-issue-01QYVSZGvcn3XMCEBSLrYDfc`
 - [ ] Create pull request referencing issue #19
 
 ## Success Criteria
