@@ -80,7 +80,11 @@ uvx pip install copyedit_ai
 
 ## Usage
 
+The CLI can be invoked using either `copyedit` or `copyedit_ai`:
+
 ```console
+copyedit --help
+# or
 copyedit_ai --help
 ```
 
