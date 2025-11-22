@@ -7,7 +7,7 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import llm
 import typer
@@ -16,6 +16,9 @@ from click_default_group import DefaultGroup
 from loguru import logger
 from rich.console import Console
 from rich.status import Status
+
+if TYPE_CHECKING:
+    import click
 
 from .copyedit import copyedit
 from .self_subcommand import cli as self_cli
@@ -312,6 +315,9 @@ def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
     if not self_command:
         logger.warning("Could not find 'self' subcommand for llm passthrough")
         return
+
+    # Type assertion: self_command is a Group (has commands and add_command)
+    self_command = cast("click.Group", self_command)
 
     # List of llm commands to pass through
     passthrough_commands = [
