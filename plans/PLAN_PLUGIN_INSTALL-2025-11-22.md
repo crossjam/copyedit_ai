@@ -2,27 +2,31 @@
 
 **Date:** 2025-11-22
 **Issue:** [#19 - Implement llm's install/uninstall for plugins](https://github.com/crossjam/copyedit_ai/issues/19)
-**Objective:** Enable plugin installation and management through `copyedit_ai self` by adding passthrough commands for llm's plugin management functionality.
+**Objective:** Enable plugin installation and management through `copyedit_ai self` by
+adding passthrough commands for llm's plugin management functionality.
 
 ## Overview
 
 ### Context
 
-Issue #19 requests adding command passthrough functionality for llm's plugin installation subcommands. This enhancement will enable users to:
+Issue #19 requests adding command passthrough functionality for llm's plugin installation
+subcommands. This enhancement will enable users to:
 - Install alternative model providers (e.g., `llm-anthropic`, `llm-ollama`, `llm-gemini`)
 - Support self-hosted local models through plugin ecosystem
 - Manage installed plugins within the isolated copyedit_ai configuration
 
 ### Current State
 
-The `_attach_llm_passthroughs()` function in `src/copyedit_ai/__main__.py` (lines 293-337) already implements the passthrough mechanism for five llm command groups:
+The `_attach_llm_passthroughs()` function in `src/copyedit_ai/__main__.py` (lines 293-337)
+already implements the passthrough mechanism for five llm command groups:
 - `templates` - Manage prompt templates
 - `keys` - Manage API keys
 - `models` - List and configure models
 - `schemas` - Manage stored schemas
 - `aliases` - Manage model aliases
 
-The infrastructure is in place; we simply need to extend the `passthrough_commands` list to include plugin-related commands.
+The infrastructure is in place; we simply need to extend the `passthrough_commands` list
+to include plugin-related commands.
 
 ### Goal
 
@@ -42,7 +46,8 @@ copyedit_ai self plugins list
 copyedit_ai self uninstall llm-anthropic
 ```
 
-All plugin operations will respect copyedit_ai's isolated configuration, preventing conflicts with system-wide llm installations.
+All plugin operations will respect copyedit_ai's isolated configuration, preventing
+conflicts with system-wide llm installations.
 
 ## LLM Plugin Commands
 
@@ -71,12 +76,14 @@ The llm CLI provides the following plugin-related commands:
 
 ### Core Approach
 
-Extend the existing `passthrough_commands` list in `_attach_llm_passthroughs()` to include:
+Extend the existing `passthrough_commands` list in `_attach_llm_passthroughs()` to
+include:
 - `install` - For plugin installation
 - `uninstall` - For plugin removal
 - `plugins` - For plugin management and listing
 
-This is a minimal, low-risk change that leverages the existing, tested passthrough infrastructure.
+This is a minimal, low-risk change that leverages the existing, tested passthrough
+infrastructure.
 
 ### Implementation Location
 
@@ -130,7 +137,8 @@ $ llm install llm-anthropic
 $ pip install llm-anthropic
 ```
 
-This breaks the isolated configuration model and creates confusion about which configuration is being used.
+This breaks the isolated configuration model and creates confusion about which
+configuration is being used.
 
 ### After (With Passthrough)
 
@@ -273,7 +281,8 @@ def test_self_plugins_help():
 
 ### Integration Tests
 
-Since plugin installation requires network access and modifies the Python environment, integration tests should be cautious:
+Since plugin installation requires network access and modifies the Python environment,
+integration tests should be cautious:
 
 ```python
 @pytest.mark.integration
@@ -290,7 +299,8 @@ def test_plugins_list_command():
     assert result.exit_code == 0
 ```
 
-**Note:** Actual plugin installation tests should be manual or in a dedicated CI environment to avoid polluting the test environment.
+**Note:** Actual plugin installation tests should be manual or in a dedicated CI
+environment to avoid polluting the test environment.
 
 ### Manual Testing Checklist
 
@@ -310,14 +320,18 @@ def test_plugins_list_command():
 
 ### 1. Plugin Installation Environment
 
-**Issue:** llm's `install` command uses pip under the hood. The plugin needs to be installed in the same Python environment where copyedit_ai is running.
+**Issue:** llm's `install` command uses pip under the hood. The plugin needs to be
+installed in the same Python environment where copyedit_ai is running.
 
 **Impact:**
-- If copyedit_ai is installed with `pipx` or `uvx`, the plugin will be installed in the isolated environment
+- If copyedit_ai is installed with `pipx` or `uvx`, the plugin will be installed in the
+  isolated environment
 - If copyedit_ai is installed system-wide, the plugin installation might require sudo
 - If copyedit_ai is in a venv, the plugin will be installed in the venv
 
-**Decision:** This is expected behavior and matches llm's design. No special handling needed. Document in README that plugins are installed in the same environment as copyedit_ai.
+**Decision:** This is expected behavior and matches llm's design. No special handling
+needed. Document in README that plugins are installed in the same environment as
+copyedit_ai.
 
 ### 2. Network Access Required
 
@@ -325,11 +339,13 @@ def test_plugins_list_command():
 
 **Impact:** `copyedit_ai self install` will fail in offline environments.
 
-**Decision:** This is acceptable. The error message from pip will be clear. Document the network requirement.
+**Decision:** This is acceptable. The error message from pip will be clear. Document the
+network requirement.
 
 ### 3. Plugin Discovery
 
-**Issue:** After installing a plugin, users might not know what models/features it provides.
+**Issue:** After installing a plugin, users might not know what models/features it
+provides.
 
 **Mitigation:** Users can use:
 - `copyedit_ai self models list` - See all available models (including new ones)
@@ -340,32 +356,39 @@ def test_plugins_list_command():
 
 ### 4. Isolated Config vs System-Wide Plugins
 
-**Issue:** Plugins installed via `copyedit_ai self install` will be in copyedit_ai's Python environment, but llm's config (keys, templates, etc.) is isolated.
+**Issue:** Plugins installed via `copyedit_ai self install` will be in copyedit_ai's
+Python environment, but llm's config (keys, templates, etc.) is isolated.
 
 **Clarification:**
 - **Plugin code:** Installed in Python environment (system or venv)
 - **Plugin config:** Uses isolated `LLM_USER_PATH` (keys, model settings, etc.)
 
-**Decision:** This is correct behavior. The plugin code is environment-level, but the configuration (API keys, settings) is isolated. Document this clearly.
+**Decision:** This is correct behavior. The plugin code is environment-level, but the
+configuration (API keys, settings) is isolated. Document this clearly.
 
 ### 5. Version Compatibility
 
-**Issue:** If llm changes the structure of `install`, `uninstall`, or `plugins` commands, the passthrough might break.
+**Issue:** If llm changes the structure of `install`, `uninstall`, or `plugins` commands,
+the passthrough might break.
 
 **Mitigation:**
 - The passthrough mechanism gracefully handles missing commands (logs warning)
 - Unit tests will catch changes in command availability
 - `llm` is a stable, mature project with semantic versioning
 
-**Decision:** Accept this risk. Add llm version to dependencies in `pyproject.toml` if needed.
+**Decision:** Accept this risk. Add llm version to dependencies in `pyproject.toml` if
+needed.
 
 ### 6. Plugin Conflicts
 
-**Issue:** Users might install conflicting plugins or plugins with incompatible dependencies.
+**Issue:** Users might install conflicting plugins or plugins with incompatible
+dependencies.
 
-**Impact:** pip will handle dependency resolution. If conflicts occur, installation will fail with clear error message.
+**Impact:** pip will handle dependency resolution. If conflicts occur, installation will
+fail with clear error message.
 
-**Decision:** This is a pip/dependency management concern, not a copyedit_ai concern. No special handling needed.
+**Decision:** This is a pip/dependency management concern, not a copyedit_ai concern. No
+special handling needed.
 
 ## Documentation Updates
 
@@ -555,7 +578,8 @@ passthrough_commands = [
 
 ## Success Criteria
 
-1. ✅ **Functionality**: Commands `install`, `uninstall`, and `plugins` are accessible via `copyedit_ai self`
+1. ✅ **Functionality**: Commands `install`, `uninstall`, and `plugins` are accessible via
+   `copyedit_ai self`
 2. ✅ **Discoverability**: Commands appear in `copyedit_ai self --help`
 3. ✅ **Documentation**: Each command's help is accessible via `--help`
 4. ✅ **Testing**: Unit tests verify commands are attached correctly
@@ -624,7 +648,8 @@ If issues arise:
 
 ## Comparison with feat/attach-plugins Branch
 
-The `feat/attach-plugins` branch (rebased earlier) added `"plugins"` to the passthrough list. However, issue #19 specifically requests `install` and `uninstall` commands.
+The `feat/attach-plugins` branch (rebased earlier) added `"plugins"` to the passthrough
+list. However, issue #19 specifically requests `install` and `uninstall` commands.
 
 ### What feat/attach-plugins Added
 ```python
@@ -653,7 +678,8 @@ passthrough_commands = [
 ```
 
 ### Recommendation
-Include all three commands (`install`, `uninstall`, `plugins`) for complete plugin management functionality.
+Include all three commands (`install`, `uninstall`, `plugins`) for complete plugin
+management functionality.
 
 ## Alternative Approaches Considered
 
@@ -750,9 +776,14 @@ Once basic plugin installation is working, consider:
 
 ## Summary
 
-This plan provides a straightforward, low-risk implementation of issue #19 by extending the existing passthrough mechanism to include plugin management commands. The change is minimal (3 lines of code), leverages tested infrastructure, and unlocks significant value for users who want to use alternative model providers or self-hosted models.
+This plan provides a straightforward, low-risk implementation of issue #19 by extending
+the existing passthrough mechanism to include plugin management commands. The change is
+minimal (3 lines of code), leverages tested infrastructure, and unlocks significant value
+for users who want to use alternative model providers or self-hosted models.
 
-The implementation maintains copyedit_ai's isolated configuration model while providing seamless access to llm's rich plugin ecosystem. Users can install, configure, and use new model providers without leaving the copyedit_ai CLI.
+The implementation maintains copyedit_ai's isolated configuration model while providing
+seamless access to llm's rich plugin ecosystem. Users can install, configure, and use new
+model providers without leaving the copyedit_ai CLI.
 
 **Key Implementation:**
 - Add `"install"`, `"uninstall"`, and `"plugins"` to `passthrough_commands` list
@@ -789,7 +820,8 @@ The implementation maintains copyedit_ai's isolated configuration model while pr
 - ✅ Added type safety improvements (TYPE_CHECKING import, cast to click.Group)
 
 #### Testing
-- ✅ Updated `test_cli_self_has_passthrough_commands()` to verify all 8 passthrough commands
+- ✅ Updated `test_cli_self_has_passthrough_commands()` to verify all 8 passthrough
+  commands
 - ✅ Added `test_cli_self_install_help()` to `tests/test_cli.py`
 - ✅ Added `test_cli_self_uninstall_help()` to `tests/test_cli.py`
 - ✅ Added `test_cli_self_plugins_help()` to `tests/test_cli.py`
@@ -806,7 +838,8 @@ The implementation maintains copyedit_ai's isolated configuration model while pr
 
 #### Documentation
 - ✅ Updated README.md with plugin installation examples (Claude, Ollama)
-- ✅ Added comprehensive "Installing Model Providers" section to docs/getting-started/configuration.md
+- ✅ Added comprehensive "Installing Model Providers" section to
+  docs/getting-started/configuration.md
 - ✅ Updated CHANGELOG.md with new feature
 - ✅ Added shorter `copyedit` command alias documentation
 
@@ -846,7 +879,8 @@ passthrough_commands = [
 
 **3. Documentation Updates**
 - **README.md:** Added plugin management commands and two complete examples
-- **docs/getting-started/configuration.md:** Added 70+ line "Installing Model Providers" section
+- **docs/getting-started/configuration.md:** Added 70+ line "Installing Model Providers"
+  section
 - **CHANGELOG.md:** Added feature entry for plugin passthrough commands and command alias
 
 **4. Additional Enhancement: Shorter Command Alias**
@@ -887,7 +921,8 @@ passthrough_commands = [
 
 ### Success Metrics - All Achieved
 
-1. ✅ **Functionality**: Commands `install`, `uninstall`, and `plugins` accessible via `copyedit_ai self`
+1. ✅ **Functionality**: Commands `install`, `uninstall`, and `plugins` accessible via
+   `copyedit_ai self`
 2. ✅ **Discoverability**: Commands appear in `copyedit_ai self --help`
 3. ✅ **Documentation**: Each command's help accessible via `--help`
 4. ✅ **Testing**: Comprehensive unit test coverage for all new commands
