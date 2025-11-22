@@ -141,6 +141,7 @@ def test_cli_file_not_found() -> None:
     assert result.exit_code == validation_error_exit_code
     # Typer will show an error about the file not existing
 
+
 @patch("copyedit_ai.self_subcommand.initialize")
 @patch("copyedit_ai.self_subcommand.is_initialized")
 @patch("copyedit_ai.self_subcommand.get_app_config_dir")
@@ -317,11 +318,20 @@ def test_cli_self_has_passthrough_commands() -> None:
     assert self_command is not None
 
     # Verify passthrough commands exist
-    expected_commands = ["templates", "keys", "models", "schemas", "aliases"]
+    expected_commands = [
+        "templates",
+        "keys",
+        "models",
+        "schemas",
+        "aliases",
+        "install",
+        "uninstall",
+        "plugins",
+    ]
     for cmd_name in expected_commands:
-        assert (
-            cmd_name in self_command.commands
-        ), f"Expected {cmd_name} in self commands"
+        assert cmd_name in self_command.commands, (
+            f"Expected {cmd_name} in self commands"
+        )
 
 
 def test_cli_self_templates_help() -> None:
@@ -420,6 +430,63 @@ def test_cli_self_schemas_help() -> None:
     assert "schema" in result.output.lower()
 
 
+def test_cli_self_install_help() -> None:
+    """Test that install passthrough help works."""
+    import typer.main  # noqa: PLC0415
+    from click.testing import CliRunner as ClickRunner  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import _attach_llm_passthroughs  # noqa: PLC0415
+
+    # Convert to Click and attach passthroughs
+    click_group = typer.main.get_command(cli)
+    _attach_llm_passthroughs(click_group)
+
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_group, ["self", "install", "--help"])
+
+    # Should show help for install command
+    assert result.exit_code == 0
+    assert "install" in result.output.lower() or "plugin" in result.output.lower()
+
+
+def test_cli_self_uninstall_help() -> None:
+    """Test that uninstall passthrough help works."""
+    import typer.main  # noqa: PLC0415
+    from click.testing import CliRunner as ClickRunner  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import _attach_llm_passthroughs  # noqa: PLC0415
+
+    # Convert to Click and attach passthroughs
+    click_group = typer.main.get_command(cli)
+    _attach_llm_passthroughs(click_group)
+
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_group, ["self", "uninstall", "--help"])
+
+    # Should show help for uninstall command
+    assert result.exit_code == 0
+    assert "uninstall" in result.output.lower() or "remove" in result.output.lower()
+
+
+def test_cli_self_plugins_help() -> None:
+    """Test that plugins passthrough help works."""
+    import typer.main  # noqa: PLC0415
+    from click.testing import CliRunner as ClickRunner  # noqa: PLC0415
+
+    from copyedit_ai.__main__ import _attach_llm_passthroughs  # noqa: PLC0415
+
+    # Convert to Click and attach passthroughs
+    click_group = typer.main.get_command(cli)
+    _attach_llm_passthroughs(click_group)
+
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_group, ["self", "plugins", "--help"])
+
+    # Should show help for plugins command
+    assert result.exit_code == 0
+    assert "plugin" in result.output.lower()
+
+
 @patch("copyedit_ai.__main__.copyedit")
 def test_cli_replace_with_confirmation(mock_copyedit, tmp_path: Path) -> None:
     """Test the --replace option with user confirmation."""
@@ -430,9 +497,7 @@ def test_cli_replace_with_confirmation(mock_copyedit, tmp_path: Path) -> None:
 
     # Mock the copyedit response
     mock_response = MagicMock()
-    mock_response.__iter__ = MagicMock(
-        return_value=iter(["Test text with errors."])
-    )
+    mock_response.__iter__ = MagicMock(return_value=iter(["Test text with errors."]))
     mock_copyedit.return_value = mock_response
 
     # Simulate user confirming the replacement
@@ -465,9 +530,7 @@ def test_cli_replace_with_cancellation(mock_copyedit, tmp_path: Path) -> None:
 
     # Mock the copyedit response
     mock_response = MagicMock()
-    mock_response.__iter__ = MagicMock(
-        return_value=iter(["Test text with errors."])
-    )
+    mock_response.__iter__ = MagicMock(return_value=iter(["Test text with errors."]))
     mock_copyedit.return_value = mock_response
 
     # Simulate user cancelling the replacement
@@ -493,9 +556,7 @@ def test_cli_replace_with_stdin_error(mock_copyedit) -> None:
     """Test that --replace with stdin input produces an error."""
     # Mock the copyedit response
     mock_response = MagicMock()
-    mock_response.__iter__ = MagicMock(
-        return_value=iter(["Test text with errors."])
-    )
+    mock_response.__iter__ = MagicMock(return_value=iter(["Test text with errors."]))
     mock_copyedit.return_value = mock_response
 
     test_input = "Test text with erors."

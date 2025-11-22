@@ -53,6 +53,7 @@ def _get_model_display_name(model_name: str) -> str:
     # Default: return the model_name as-is
     return model_name
 
+
 # Register subcommands
 app.add_typer(
     self_cli,
@@ -319,6 +320,9 @@ def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
         "models",  # List and configure models
         "schemas",  # Manage stored schemas
         "aliases",  # Manage model aliases
+        "install",  # Install plugins from PyPI
+        "uninstall",  # Uninstall plugins
+        "plugins",  # List and manage installed plugins
     ]
 
     # Attach each command group

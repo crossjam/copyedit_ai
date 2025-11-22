@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MkDocs documentation with material theme
 - GitHub Actions for testing and publishing
 - Automatic GitHub release generation
+- Plugin management passthrough commands (`install`, `uninstall`, `plugins`) for installing LLM providers
 
 ### Changed
 

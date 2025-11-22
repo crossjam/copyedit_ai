@@ -18,13 +18,46 @@
 
 Manage your isolated LLM configuration directly through copyedit_ai:
 
+- `copyedit_ai self install` - Install LLM plugins from PyPI
+- `copyedit_ai self uninstall` - Uninstall LLM plugins
+- `copyedit_ai self plugins` - List and manage installed plugins
 - `copyedit_ai self keys` - Manage API keys for different model providers
 - `copyedit_ai self templates` - Manage prompt templates
 - `copyedit_ai self models` - List and configure available models
 - `copyedit_ai self aliases` - Create shortcuts for frequently used models
 - `copyedit_ai self schemas` - Manage stored schemas
 
-All commands operate within copyedit_ai's isolated configuration directory, preventing conflicts with system-wide llm installations. 
+All commands operate within copyedit_ai's isolated configuration directory, preventing conflicts with system-wide llm installations.
+
+#### Example: Adding Claude Support
+
+```bash
+# Install Anthropic plugin
+copyedit_ai self install llm-anthropic
+
+# Set up API key
+copyedit_ai self keys set anthropic
+# Enter your API key when prompted
+
+# Create an alias for convenience
+copyedit_ai self aliases set sonnet claude-sonnet-4.5
+
+# Use Claude to copyedit
+copyedit_ai --model sonnet article.txt
+```
+
+#### Example: Using Local Models with Ollama
+
+```bash
+# Install Ollama plugin
+copyedit_ai self install llm-ollama
+
+# List available Ollama models
+copyedit_ai self models list
+
+# Use a local model
+copyedit_ai --model llama3.2 draft.txt
+``` 
 
 ## Installation
 

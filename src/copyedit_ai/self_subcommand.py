@@ -228,5 +228,3 @@ def check_command(  # noqa: C901, PLR0912, PLR0915
         logger.exception("Failed to check configuration")
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(1) from None
-
-
