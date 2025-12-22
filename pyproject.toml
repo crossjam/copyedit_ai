@@ -13,6 +13,7 @@ dependencies = [
     "typer",
     "pydantic_settings",
     "rich",
+    "platformdirs",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",

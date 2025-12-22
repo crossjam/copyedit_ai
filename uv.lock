@@ -179,6 +179,7 @@ source = { editable = "." }
 dependencies = [
     { name = "llm" },
     { name = "loguru" },
+    { name = "platformdirs" },
     { name = "pydantic-settings" },
     { name = "rich" },
     { name = "typer" },
@@ -207,6 +208,7 @@ docs = [
 requires-dist = [
     { name = "llm" },
     { name = "loguru" },
+    { name = "platformdirs" },
     { name = "pydantic-settings" },
     { name = "rich" },
     { name = "typer" },
