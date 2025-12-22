@@ -3,7 +3,10 @@
 from collections.abc import Iterator
 
 import llm
+from llm.cli import LoadTemplateError, load_template
 from loguru import logger
+
+from .user_dir import get_llm_config_dir, set_llm_user_path
 
 SYSTEM_PROMPT = """You are copyeditor that suggests and makes edits on text.
 
@@ -24,6 +27,30 @@ If the text looks like markdown, ignore fenced quotes or leading text with
 
 Do not modify emojis.
 """
+
+
+def templates_installed() -> dict[str, str]:
+    """List available prompt templates"""
+    set_llm_user_path()
+    path = get_llm_config_dir() / "templates"
+
+    templates = {}
+    for file in path.glob("*.yaml"):
+        name = file.stem
+        try:
+            template = load_template(name)
+        except LoadTemplateError:
+            # Skip invalid templates
+            continue
+        text = []
+        if template.system:
+            text.append(f"system: {template.system}")
+            if template.prompt:
+                text.append(f" prompt: {template.prompt}")
+        else:
+            text = [template.prompt if template.prompt else ""]
+        templates[name] = "".join(text).replace("\n", " ")
+    return templates
 
 
 def copyedit(
@@ -53,8 +80,11 @@ def copyedit(
     # Prepare the prompt
     prompt_text = f"Copy edit the text that follows:\n\n{text}"
 
+    template = load_template("copyedit")
+
     # Execute the prompt
-    response = model.prompt(prompt_text, system=SYSTEM_PROMPT)
+
+    response = model.prompt(prompt_text, system=template.system)
 
     if stream:
         return response

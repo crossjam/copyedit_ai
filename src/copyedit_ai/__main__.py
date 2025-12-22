@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+import click
 import llm
 import typer
 import typer.main
@@ -20,9 +21,10 @@ from rich.status import Status
 if TYPE_CHECKING:
     import click
 
-from .copyedit import copyedit
+from .copyedit import copyedit, templates_installed
 from .self_subcommand import cli as self_cli
 from .settings import Settings
+from .user_dir import set_llm_user_path
 
 console = Console(stderr=True)
 
@@ -237,6 +239,7 @@ def main_callback(
     ctx.obj = Settings()
     debug = debug or ctx.obj.debug
 
+    set_llm_user_path()
     # Only add file logging if explicitly requested
     log_path = log_file or ctx.obj.log_file
 
@@ -356,6 +359,15 @@ def cli() -> None:
     default_group = cast("DefaultGroup", click_group)
     default_group.default_cmd_name = "edit"
     default_group.default_if_no_args = True
+
+    existing_templates = templates_installed()
+
+    if not any(k for k in existing_templates if k.startswith("copyedit")):
+        logger.info(
+            "Copyedit template doesn't exist. Run the following\n\ncopyedit self init"
+        )
+    else:
+        logger.info("Copyedit template installed")
 
     # Attach llm passthrough commands to 'self' subcommand
     _attach_llm_passthroughs(default_group)
