@@ -3,6 +3,7 @@
 Copyedit text from the CLI using AI
 """
 
+import os
 import shutil
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from typing import TYPE_CHECKING, cast
 
 import click
 import llm
+import mdformat
 import typer
 import typer.main
 from click_default_group import DefaultGroup
@@ -67,17 +69,27 @@ app.add_typer(
 )
 
 
-def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
+def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
     settings: Settings,
     file_path: Path | None,
     model: str | None,
     stream: bool,
     replace: bool,
+    wrap_width: int,
+    markdown: bool,
 ) -> None:
     """Perform copyediting operation.
 
     Helper function to handle the actual copyediting logic.
     """
+    if replace and not file_path:
+        logger.error("Cannot use --replace with stdin input")
+        typer.echo(
+            "Error: --replace requires a file argument, not stdin",
+            err=True,
+        )
+        raise typer.Exit(1)
+
     # Use default model from settings if not provided
     model_name = model or settings.default_model
 
@@ -140,6 +152,8 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
                     typer.echo(chunk, nl=False)
 
             output_text = "".join(chunks)
+            if markdown:
+                output_text = mdformat.text(output_text, options={"wrap": wrap_width})
             if not replace:
                 typer.echo()  # Final newline
             else:
@@ -150,6 +164,8 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
             # Type assertion: in non-streaming mode, response is always Response
             assert isinstance(response, llm.Response)  # noqa: S101
             output_text = response.text()
+            if markdown:
+                output_text = mdformat.text(output_text, options={"wrap": wrap_width})
             # Stop spinner after API call completes
             status.stop()
             if not replace:
@@ -157,21 +173,13 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
 
         # Handle replace mode
         if replace:
-            if not file_path:
-                logger.error("Cannot use --replace with stdin input")
-                typer.echo(
-                    "Error: --replace requires a file argument, not stdin",
-                    err=True,
-                )
-                raise typer.Exit(1)  # noqa: TRY301
-
+            assert file_path is not None  # Validated at function start  # noqa: S101
             # Write to secure temporary file
             temp_fd, temp_path_str = tempfile.mkstemp(
                 suffix=file_path.suffix,
                 prefix=f"{file_path.stem}_copyedit_",
                 text=True,
             )
-            import os  # noqa: PLC0415
 
             os.close(temp_fd)  # Close fd, we'll use Path.open() instead
             temp_path = Path(temp_path_str)
@@ -255,7 +263,7 @@ def main_callback(
 
 
 @app.command(name="edit")
-def edit_command(
+def edit_command(  # noqa: PLR0913
     ctx: typer.Context,
     file_path: Path | None = typer.Argument(
         None,
@@ -280,6 +288,18 @@ def edit_command(
         "-r",
         help="Replace the original file after confirmation. Creates a .bak backup.",
     ),
+    wrap_width: int = typer.Option(
+        90,
+        "--wrap-width",
+        "-w",
+        min=1,
+        help="Set width for mdformat word wrapping",
+    ),
+    markdown: bool = typer.Option(
+        True,
+        "--markdown/--no-markdown",
+        help="Enable/disable Markdown formatting and word wrapping of output",
+    ),
 ) -> None:
     """Copyedit text using AI.
 
@@ -294,7 +314,7 @@ def edit_command(
 
     """
     settings: Settings = ctx.obj
-    _perform_copyedit(settings, file_path, model, stream, replace)
+    _perform_copyedit(settings, file_path, model, stream, replace, wrap_width, markdown)
 
 
 def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:

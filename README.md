@@ -94,7 +94,7 @@ copyedit_ai --help
 This project and it's virtual environment is managed using [uv][uv] and
 is configured to support automatic activation of virtual environments
 using [direnv][direnv]. Development activites such as linting and testing
-are automated via [Poe The Poet][poethepoet], run `poe` after cloning
+are automated via [Poe The Poet][poe], run `poe` after cloning
 this repo.
 
 ### Clone

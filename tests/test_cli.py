@@ -529,8 +529,8 @@ def test_cli_replace_with_confirmation(mock_copyedit, tmp_path: Path) -> None:
     assert result.exit_code == 0
     mock_copyedit.assert_called_once()
 
-    # Verify the file was replaced
-    assert test_file.read_text() == "Test text with errors."
+    # Verify the file was replaced (mdformat.text adds a trailing newline)
+    assert test_file.read_text() == "Test text with errors.\n"
 
     # Verify backup was created
     backup_path = tmp_path / "test.txt.bak"
@@ -610,8 +610,8 @@ def test_cli_replace_no_stream(mock_copyedit, tmp_path: Path) -> None:
     assert result.exit_code == 0
     mock_copyedit.assert_called_once()
 
-    # Verify the file was replaced
-    assert test_file.read_text() == "Test text with errors."
+    # Verify the file was replaced (mdformat.text adds a trailing newline)
+    assert test_file.read_text() == "Test text with errors.\n"
 
     # Verify backup was created
     backup_path = tmp_path / "test.txt.bak"
@@ -708,3 +708,315 @@ def test_cli_startup_message_with_stdin(mock_copyedit) -> None:
     assert result.exit_code == 0
     # Check for startup message mentioning stdin
     assert "Copyediting:" in result.output or "stdin" in result.output
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_wrap_width_default(mock_copyedit, mock_mdformat, tmp_path: Path) -> None:
+    """Test that the default wrap width is 90."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text to return the input unchanged
+    mock_mdformat.return_value = "Corrected text"
+
+    result = runner.invoke(cli, ["edit", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was called with default wrap width of 90
+    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 90})
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_wrap_width_custom(mock_copyedit, mock_mdformat, tmp_path: Path) -> None:
+    """Test that custom wrap width is passed to mdformat."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text to return the input unchanged
+    mock_mdformat.return_value = "Corrected text"
+
+    result = runner.invoke(cli, ["edit", "--wrap-width", "120", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was called with custom wrap width of 120
+    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 120})
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_wrap_width_short_option(
+    mock_copyedit, mock_mdformat, tmp_path: Path
+) -> None:
+    """Test that the -w short option works for wrap width."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text to return the input unchanged
+    mock_mdformat.return_value = "Corrected text"
+
+    result = runner.invoke(cli, ["edit", "-w", "72", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was called with wrap width of 72
+    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 72})
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_wrap_width_with_no_stream(
+    mock_copyedit, mock_mdformat, tmp_path: Path
+) -> None:
+    """Test that wrap width works correctly with --no-stream option."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response for non-streaming
+    mock_response = create_autospec(llm.Response, instance=True)
+    mock_response.text.return_value = "Corrected text without streaming"
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text to return the input unchanged
+    mock_mdformat.return_value = "Corrected text without streaming"
+
+    result = runner.invoke(
+        cli, ["edit", "--no-stream", "--wrap-width", "100", str(test_file)]
+    )
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was called with wrap width of 100
+    mock_mdformat.assert_called_once_with(
+        "Corrected text without streaming", options={"wrap": 100}
+    )
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_wrap_width_with_replace(
+    mock_copyedit, mock_mdformat, tmp_path: Path
+) -> None:
+    """Test that wrap width works correctly with --replace option."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text to return the input unchanged
+    mock_mdformat.return_value = "Corrected text"
+
+    # Simulate user confirming the replacement
+    result = runner.invoke(
+        cli, ["edit", "--replace", "-w", "80", str(test_file)], input="y\n"
+    )
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was called with wrap width of 80
+    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 80})
+
+    # Verify the file was replaced with the formatted text
+    assert test_file.read_text() == "Corrected text"
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_markdown_default(mock_copyedit, mock_mdformat, tmp_path: Path) -> None:
+    """Test that markdown formatting is enabled by default."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text to return the input unchanged
+    mock_mdformat.return_value = "Corrected text"
+
+    result = runner.invoke(cli, ["edit", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was called (markdown formatting is enabled by default)
+    mock_mdformat.assert_called_once()
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_no_markdown(mock_copyedit, mock_mdformat, tmp_path: Path) -> None:
+    """Test that --no-markdown disables markdown formatting."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text (should not be called)
+    mock_mdformat.return_value = "Should not be called"
+
+    result = runner.invoke(cli, ["edit", "--no-markdown", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was NOT called
+    mock_mdformat.assert_not_called()
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_no_markdown_with_no_stream(
+    mock_copyedit, mock_mdformat, tmp_path: Path
+) -> None:
+    """Test that --no-markdown works with --no-stream option."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response for non-streaming
+    mock_response = create_autospec(llm.Response, instance=True)
+    mock_response.text.return_value = "Corrected text without streaming"
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text (should not be called)
+    mock_mdformat.return_value = "Should not be called"
+
+    result = runner.invoke(
+        cli, ["edit", "--no-stream", "--no-markdown", str(test_file)]
+    )
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was NOT called
+    mock_mdformat.assert_not_called()
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_no_markdown_with_replace(
+    mock_copyedit, mock_mdformat, tmp_path: Path
+) -> None:
+    """Test that --no-markdown works with --replace option."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    original_content = "Test text."
+    test_file.write_text(original_content)
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text (should not be called)
+    mock_mdformat.return_value = "Should not be called"
+
+    # Simulate user confirming the replacement
+    result = runner.invoke(
+        cli, ["edit", "--replace", "--no-markdown", str(test_file)], input="y\n"
+    )
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was NOT called
+    mock_mdformat.assert_not_called()
+
+    # Verify the file was replaced with the unformatted text
+    assert test_file.read_text() == "Corrected text"
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_markdown_with_wrap_width(
+    mock_copyedit, mock_mdformat, tmp_path: Path
+) -> None:
+    """Test that --markdown and --wrap-width work together."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text to return the input unchanged
+    mock_mdformat.return_value = "Corrected text"
+
+    result = runner.invoke(
+        cli, ["edit", "--markdown", "--wrap-width", "100", str(test_file)]
+    )
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was called with the correct wrap width
+    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 100})
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_no_markdown_ignores_wrap_width(
+    mock_copyedit, mock_mdformat, tmp_path: Path
+) -> None:
+    """Test that --no-markdown ignores --wrap-width since formatting is disabled."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter(["Corrected text"]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text (should not be called)
+    mock_mdformat.return_value = "Should not be called"
+
+    result = runner.invoke(
+        cli, ["edit", "--no-markdown", "--wrap-width", "100", str(test_file)]
+    )
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify mdformat.text was NOT called even though wrap-width was specified
+    mock_mdformat.assert_not_called()

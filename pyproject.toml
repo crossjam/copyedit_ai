@@ -14,6 +14,9 @@ dependencies = [
     "pydantic_settings",
     "rich",
     "platformdirs",
+    "mdformat",
+    "mdformat-footnote",
+    "mdformat-front-matters",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
