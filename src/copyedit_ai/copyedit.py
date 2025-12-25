@@ -83,7 +83,4 @@ def copyedit(
     template = load_template("copyedit")
 
     # Execute the prompt
-
-    response = model.prompt(prompt_text, system=template.system)
-
-    return response
+    return model.prompt(prompt_text, system=template.system)
