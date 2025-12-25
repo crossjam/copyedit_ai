@@ -18,13 +18,15 @@ from loguru import logger
 from rich.console import Console
 from rich.status import Status
 
+from .logging_config import setup_logging
+
 if TYPE_CHECKING:
     import click
 
 from .copyedit import copyedit, templates_installed
 from .self_subcommand import cli as self_cli
 from .settings import Settings
-from .user_dir import set_llm_user_path
+from .user_dir import set_llm_user_path, get_app_config_dir
 
 console = Console(stderr=True)
 
@@ -239,19 +241,20 @@ def main_callback(
     ctx.obj = Settings()
     debug = debug or ctx.obj.debug
 
+    setup_logging(get_app_config_dir(), verbose=debug)
     set_llm_user_path()
     # Only add file logging if explicitly requested
     log_path = log_file or ctx.obj.log_file
 
     # Enable logging if debug mode or file logging is requested
     if debug or log_path:
-        logger.enable("copyedit_ai")
+        logger.enable("copyedit")
         if log_path:
             logger.add(str(log_path))
             logger.info(f"Logging to file: {log_path}")
         logger.info(f"{debug=}")
     else:
-        logger.disable("copyedit_ai")
+        logger.disable("copyedit")
 
 
 @app.command(name="edit")
@@ -287,10 +290,10 @@ def edit_command(
     The copyedited text and a summary of changes are output to stdout.
 
     Examples:
-        copyedit_ai < draft.txt
-        copyedit_ai draft.txt
-        cat draft.txt | copyedit_ai -m claude-opus
-        copyedit_ai draft.txt --replace
+        copyedit < draft.txt
+        copyedit draft.txt
+        cat draft.txt | copyedit -m claude-opus
+        copyedit draft.txt --replace
 
     """
     settings: Settings = ctx.obj
@@ -300,7 +303,7 @@ def edit_command(
 def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
     """Attach llm's command groups to the 'self' subcommand.
 
-    This allows users to access llm's native commands within copyedit_ai's
+    This allows users to access llm's native commands within copyedit's
     isolated configuration context.
 
     Args:
