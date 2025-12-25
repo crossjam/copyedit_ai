@@ -294,7 +294,7 @@ def edit_command(  # noqa: PLR0913
     markdown: bool = typer.Option(
         True,
         "--markdown/--no-markdown",
-        help="Format output as markdown using mdformat",
+        help="Enable/disable Markdown formatting and word wrapping of output",
     ),
 ) -> None:
     """Copyedit text using AI.
