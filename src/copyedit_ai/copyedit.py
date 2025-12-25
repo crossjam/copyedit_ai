@@ -86,6 +86,4 @@ def copyedit(
 
     response = model.prompt(prompt_text, system=template.system)
 
-    if stream:
-        return response
     return response
