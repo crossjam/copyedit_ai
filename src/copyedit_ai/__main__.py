@@ -289,7 +289,11 @@ def edit_command(  # noqa: PLR0913
         help="Replace the original file after confirmation. Creates a .bak backup.",
     ),
     wrap_width: int = typer.Option(
-        90, "--wrap-width", "-w", help="Set width for mdformat word wrapping"
+        90,
+        "--wrap-width",
+        "-w",
+        min=1,
+        help="Set width for mdformat word wrapping",
     ),
     markdown: bool = typer.Option(
         True,
