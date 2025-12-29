@@ -336,7 +336,6 @@ def main_callback(
         log_file=log_path,
         enable_file_logging=None if log_path else False,
     )
-    set_llm_user_path()
 
     # Enable logging if debug mode or file logging is requested
     if debug or log_path:
