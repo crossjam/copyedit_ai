@@ -70,14 +70,31 @@ app.add_typer(
 )
 
 
+def _get_package_version() -> str:
+    """Get the package version.
+
+    Returns:
+        The package version string.
+
+    Raises:
+        RuntimeError: If the version cannot be retrieved.
+
+    """
+    try:
+        return get_version("copyedit_ai")
+    except Exception as error:
+        logger.error(f"Failed to retrieve package version: {error}")
+        msg = "Error: Failed to retrieve version"
+        raise RuntimeError(msg) from error
+
+
 @app.command(name="version")
 def version_command() -> None:
     """Display the version of copyedit_ai."""
     try:
-        pkg_version = get_version("copyedit_ai")
+        pkg_version = _get_package_version()
         typer.echo(f"copyedit-ai: {pkg_version}")
-    except Exception as error:
-        logger.error(f"Failed to retrieve package version: {error}")
+    except RuntimeError:
         typer.echo("Error: Failed to retrieve version", err=True)
         raise typer.Exit(code=1) from None
 
@@ -432,8 +449,15 @@ def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
             logger.warning(f"Could not find llm command: {cmd_name}")
 
 
-def cli() -> None:
-    """CLI entry point with default command support."""
+def setup_click_group() -> "DefaultGroup":
+    """Set up the Click group with DefaultGroup and version option.
+
+    This function is used by both the CLI entry point and tests.
+
+    Returns:
+        The configured Click group.
+
+    """
     click_group = typer.main.get_command(app)
     # Replace the group class with DefaultGroup
     click_group.__class__ = DefaultGroup
@@ -449,9 +473,9 @@ def cli() -> None:
         if not value or ctx.resilient_parsing:
             return
         try:
-            pkg_version = get_version("copyedit_ai")
+            pkg_version = _get_package_version()
             click.echo(f"copyedit-ai: {pkg_version}")
-        except Exception:
+        except RuntimeError:
             click.echo("Error: Failed to retrieve version", err=True)
             ctx.exit(1)
         ctx.exit(0)
@@ -467,6 +491,13 @@ def cli() -> None:
             callback=version_callback,
         )
     )
+
+    return default_group
+
+
+def cli() -> None:
+    """CLI entry point with default command support."""
+    default_group = setup_click_group()
 
     existing_templates = templates_installed()
 

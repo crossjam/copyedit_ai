@@ -1,20 +1,16 @@
 """test copyedit_ai CLI: copyedit_ai."""
 
 import importlib
-from importlib.metadata import version as get_version
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, create_autospec, patch
 
-import click
 import llm
-import typer.main
 from click.testing import CliRunner as ClickRunner
-from click_default_group import DefaultGroup
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
-    from click import Context, Parameter
+    from click_default_group import DefaultGroup
 
 main_module_name = "copyedit_ai.__main__"
 main_module = importlib.import_module(main_module_name)
@@ -26,38 +22,9 @@ cli = main_module.app
 def _get_click_cli() -> "DefaultGroup":
     """Get the Click CLI with DefaultGroup for testing.
 
-    This simulates what the cli() function does.
+    This uses the shared setup function from the main module.
     """
-    click_group = typer.main.get_command(main_module.app)
-    click_group.__class__ = DefaultGroup
-    default_group = cast("DefaultGroup", click_group)
-    default_group.default_cmd_name = "edit"
-    default_group.default_if_no_args = True
-
-    # Add --version/-V option
-    def version_callback(ctx: "Context", _param: "Parameter", value: bool) -> None:
-        if not value or ctx.resilient_parsing:
-            return
-        try:
-            pkg_version = get_version("copyedit_ai")
-            click.echo(f"copyedit-ai: {pkg_version}")
-        except Exception:
-            click.echo("Error: Failed to retrieve version", err=True)
-            ctx.exit(1)
-        ctx.exit(0)
-
-    default_group.params.append(
-        click.Option(
-            ["--version", "-V"],
-            is_flag=True,
-            expose_value=False,
-            is_eager=True,
-            help="Show the version and exit.",
-            callback=version_callback,
-        )
-    )
-
-    return default_group
+    return main_module.setup_click_group()
 
 
 def test_cli_help() -> None:
@@ -1449,7 +1416,7 @@ def test_cli_word_wrapping_validation_warning(
     # Create multiple very long lines that exceed the wrap width
     # Using .join() is clearer than f-strings for multi-line text
     long_lines = "\n".join(
-        [  # noqa: FLY002
+        [
             (
                 "This is a very long line number one that definitely exceeds the "
                 "wrap width and should trigger a warning if not properly wrapped."
