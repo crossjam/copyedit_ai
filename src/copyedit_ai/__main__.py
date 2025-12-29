@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 from .copyedit import copyedit, templates_installed
 from .self_subcommand import cli as self_cli
 from .settings import Settings
-from .user_dir import set_llm_user_path, get_app_config_dir
+from .user_dir import get_app_config_dir, set_llm_user_path
 
 console = Console(stderr=True)
 
@@ -328,17 +328,20 @@ def main_callback(
     """Copyedit text from the CLI using AI"""
     ctx.obj = Settings()
     debug = debug or ctx.obj.debug
-
-    setup_logging(get_app_config_dir(), verbose=debug)
-    set_llm_user_path()
-    # Only add file logging if explicitly requested
     log_path = log_file or ctx.obj.log_file
+
+    setup_logging(
+        get_app_config_dir(),
+        verbose=debug,
+        log_file=log_path,
+        enable_file_logging=bool(log_path),
+    )
+    set_llm_user_path()
 
     # Enable logging if debug mode or file logging is requested
     if debug or log_path:
         logger.enable("copyedit")
         if log_path:
-            logger.add(str(log_path))
             logger.info(f"Logging to file: {log_path}")
         logger.info(f"{debug=}")
     else:

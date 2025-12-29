@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, MutableMapping, Optional
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger as _logger
 from loguru_config.loguru_config import LoguruConfig  # type: ignore[import-untyped]
@@ -20,22 +21,21 @@ LOG_FORMAT = (
 
 
 if TYPE_CHECKING:
+    import loguru
     from loguru import Record
 else:  # pragma: no cover - runtime alias for typing compatibility
     Record = MutableMapping[str, object]
 
 
-def _format_record(record: "Record") -> str:
+def _format_record(record: Record) -> str:
     """Build the log line using either the bound name or module name."""
-
     logger_name = record["extra"].get("logger_name", record["name"])
     record["extra"].setdefault("logger_name", logger_name)
     return LOG_FORMAT
 
 
-def _default_loguru_config(level: str, log_file: Optional[Path]) -> dict:
+def _default_loguru_config(level: str, log_file: Path | None) -> dict[str, Any]:
     """Build a default loguru configuration dictionary."""
-
     handlers = [
         {
             "sink": sys.stderr,
@@ -69,7 +69,6 @@ def _default_loguru_config(level: str, log_file: Optional[Path]) -> dict:
 
 def _load_external_config(config_path: Path) -> bool:
     """Load configuration from a file if it exists."""
-
     if config_path.is_file():
         LoguruConfig.load(config_path)
         return True
@@ -81,7 +80,7 @@ def setup_logging(
     *,
     verbose: bool = False,
     quiet: bool = False,
-    log_file: Optional[Path] = None,
+    log_file: Path | None = None,
     enable_file_logging: bool | None = None,
 ) -> None:
     """Configure loguru logging for the application.
@@ -90,7 +89,6 @@ def setup_logging(
     environment variable or by placing a ``logging.json`` file in the
     application directory.
     """
-
     # Determine log level with precedence: quiet > verbose > default
     if quiet:
         level = "ERROR"
@@ -108,13 +106,12 @@ def setup_logging(
     if _load_external_config(app_dir / DEFAULT_CONFIG_FILENAME):
         return
 
-    file_sink = log_file if enable_file_logging else None
+    file_sink = log_file if enable_file_logging is not False else None
     LoguruConfig.load(_default_loguru_config(level, file_sink), inplace=True)
 
 
-def get_logger(name: Optional[str] = None):
+def get_logger(name: str | None = None) -> loguru.Logger:
     """Return a logger instance bound to the provided name."""
-
     if name:
         return _logger.bind(logger_name=name)
     return _logger
