@@ -220,11 +220,11 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
         if stream:
             if stream and markdown:
                 logger.warning(
-                    "Streaming output response does not"
+                    "Streaming output response does not "
                     "incorporate word wrapping to the console."
                 )
                 click.secho(
-                    "Streaming output response does not"
+                    "Streaming output response does not "
                     "incorporate word wrapping to the console.",
                     fg="yellow",
                 )
