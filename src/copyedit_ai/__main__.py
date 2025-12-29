@@ -215,6 +215,22 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
         # Collect the output
         output_text = ""
         if stream:
+            if stream and markdown:
+                logger.warning(
+                    "Streaming output response does not incorporate word wrapping to the console."
+                )
+                click.secho(
+                    "Streaming output response does not incorporate word wrapping to the console.",
+                    fg="yellow",
+                )
+                logger.warning(
+                    "LLM response text may present lines long then wrap width."
+                )
+                click.secho(
+                    "LLM response text may present lines long then wrap width.",
+                    fg="yellow",
+                )
+
             # Stream output and collect it
             chunks = []
             first_chunk = True
@@ -399,6 +415,7 @@ def edit_command(  # noqa: PLR0913
 
     """
     settings: Settings = ctx.obj
+
     _perform_copyedit(settings, file_path, model, stream, replace, wrap_width, markdown)
 
 
