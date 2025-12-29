@@ -688,6 +688,8 @@ def test_cli_no_log_file_by_default(mock_copyedit, tmp_path: Path) -> None:
 @patch("copyedit_ai.__main__.copyedit")
 def test_cli_with_log_file_option(mock_copyedit, tmp_path: Path) -> None:
     """Test that log file is created when --log-file is specified."""
+    from loguru import logger as loguru_logger
+
     # Create a temporary test file
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test text.")
@@ -705,6 +707,11 @@ def test_cli_with_log_file_option(mock_copyedit, tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 0, f"Output: {result.output}"
+
+    # Ensure all log handlers have completed their writes
+    # This is necessary because CliRunner may close file handles
+    # before loguru finishes writing, especially on some platforms
+    loguru_logger.complete()
 
     # Verify log file was created
     assert log_file_path.exists()
