@@ -289,7 +289,7 @@ def edit_command(  # noqa: PLR0913
         help="Replace the original file after confirmation. Creates a .bak backup.",
     ),
     wrap_width: int = typer.Option(
-        90,
+        80,
         "--wrap-width",
         "-w",
         min=1,
