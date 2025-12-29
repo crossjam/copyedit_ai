@@ -334,15 +334,13 @@ def main_callback(
         get_app_config_dir(),
         verbose=debug,
         log_file=log_path,
-        enable_file_logging=bool(log_path),
+        enable_file_logging=None if log_path else False,
     )
     set_llm_user_path()
 
     # Enable logging if debug mode or file logging is requested
     if debug or log_path:
         logger.enable("copyedit")
-        if log_path:
-            logger.info(f"Logging to file: {log_path}")
         logger.info(f"{debug=}")
     else:
         logger.disable("copyedit")

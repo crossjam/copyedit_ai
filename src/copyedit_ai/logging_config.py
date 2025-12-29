@@ -106,7 +106,14 @@ def setup_logging(
     if _load_external_config(app_dir / DEFAULT_CONFIG_FILENAME):
         return
 
-    file_sink = log_file if enable_file_logging is not False else None
+    # Determine if file logging should be enabled:
+    # - True if enable_file_logging is explicitly True
+    # - True if enable_file_logging is None and log_file is provided
+    # - False otherwise
+    should_log_to_file = enable_file_logging is True or (
+        enable_file_logging is None and log_file is not None
+    )
+    file_sink = log_file if should_log_to_file else None
     LoguruConfig.load(_default_loguru_config(level, file_sink), inplace=True)
 
 
