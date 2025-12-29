@@ -27,7 +27,7 @@ def mock_llm_response():
 def test_system_prompt_exists():
     """Test that the system prompt is defined."""
     assert SYSTEM_PROMPT
-    assert "copyeditor" in SYSTEM_PROMPT.lower()
+    assert "copy editor" in SYSTEM_PROMPT.lower()
     assert "punctuation" in SYSTEM_PROMPT.lower()
     assert "grammatical" in SYSTEM_PROMPT.lower()
 
