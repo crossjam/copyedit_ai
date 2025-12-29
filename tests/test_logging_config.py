@@ -1,7 +1,6 @@
 """Tests for logging_config module."""
 
 import json
-import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -28,7 +27,7 @@ def test_format_record_uses_bound_logger_name():
         "name": "module_name",
     }
 
-    result = logging_config._format_record(record)
+    result = logging_config._format_record(record)  # noqa: SLF001
 
     assert result == logging_config.LOG_FORMAT
     assert record["extra"]["logger_name"] == "test_logger"
@@ -41,7 +40,7 @@ def test_format_record_falls_back_to_module_name():
         "name": "module_name",
     }
 
-    result = logging_config._format_record(record)
+    result = logging_config._format_record(record)  # noqa: SLF001
 
     assert result == logging_config.LOG_FORMAT
     assert record["extra"]["logger_name"] == "module_name"
@@ -49,7 +48,7 @@ def test_format_record_falls_back_to_module_name():
 
 def test_default_loguru_config_stderr_only():
     """Test _default_loguru_config with no file logging."""
-    config = logging_config._default_loguru_config("INFO", None)
+    config = logging_config._default_loguru_config("INFO", None)  # noqa: SLF001
 
     assert "handlers" in config
     assert len(config["handlers"]) == 1
@@ -61,10 +60,10 @@ def test_default_loguru_config_with_file(tmp_path: Path):
     """Test _default_loguru_config with file logging."""
     log_file = tmp_path / "test.log"
 
-    config = logging_config._default_loguru_config("DEBUG", log_file)
+    config = logging_config._default_loguru_config("DEBUG", log_file)  # noqa: SLF001
 
     assert "handlers" in config
-    assert len(config["handlers"]) == 2
+    assert len(config["handlers"]) == 2  # noqa: PLR2004
     # First handler is stderr
     assert config["handlers"][0]["level"] == "DEBUG"
     # Second handler is file
@@ -78,7 +77,7 @@ def test_default_loguru_config_creates_parent_dirs(tmp_path: Path):
     log_file = tmp_path / "subdir" / "test.log"
     assert not log_file.parent.exists()
 
-    logging_config._default_loguru_config("INFO", log_file)
+    logging_config._default_loguru_config("INFO", log_file)  # noqa: SLF001
 
     assert log_file.parent.exists()
 
@@ -97,7 +96,7 @@ def test_load_external_config_file_exists(tmp_path: Path):
     config_file.write_text(json.dumps(config_data))
 
     with patch("copyedit_ai.logging_config.LoguruConfig.load") as mock_load:
-        result = logging_config._load_external_config(config_file)
+        result = logging_config._load_external_config(config_file)  # noqa: SLF001
 
         assert result is True
         mock_load.assert_called_once_with(config_file)
@@ -107,7 +106,7 @@ def test_load_external_config_file_not_exists(tmp_path: Path):
     """Test _load_external_config returns False when file doesn't exist."""
     config_file = tmp_path / "nonexistent.json"
 
-    result = logging_config._load_external_config(config_file)
+    result = logging_config._load_external_config(config_file)  # noqa: SLF001
 
     assert result is False
 
@@ -159,7 +158,7 @@ def test_setup_logging_with_file_logging_enabled(tmp_path: Path):
         )
 
         config = mock_load.call_args[0][0]
-        assert len(config["handlers"]) == 2
+        assert len(config["handlers"]) == 2  # noqa: PLR2004
 
 
 def test_setup_logging_with_file_logging_disabled(tmp_path: Path):
@@ -177,7 +176,7 @@ def test_setup_logging_with_file_logging_disabled(tmp_path: Path):
 
 
 def test_setup_logging_with_file_logging_none(tmp_path: Path):
-    """Test setup_logging with file logging set to None (defaults to enabled if file provided)."""
+    """Test setup_logging with None for enable_file_logging parameter."""
     log_file = tmp_path / "test.log"
 
     with patch("copyedit_ai.logging_config.LoguruConfig.load") as mock_load:
@@ -186,8 +185,9 @@ def test_setup_logging_with_file_logging_none(tmp_path: Path):
         )
 
         config = mock_load.call_args[0][0]
-        # When enable_file_logging is None and log_file is provided, it should add file handler
-        assert len(config["handlers"]) == 2
+        # When enable_file_logging is None and log_file is provided,
+        # it should add file handler
+        assert len(config["handlers"]) == 2  # noqa: PLR2004
 
 
 def test_setup_logging_loads_env_config(tmp_path: Path, monkeypatch):
@@ -237,8 +237,8 @@ def test_setup_logging_env_config_takes_precedence(tmp_path: Path, monkeypatch):
 def test_setup_logging_removes_existing_handlers(tmp_path: Path):
     """Test setup_logging removes existing handlers."""
     # Add a handler first
-    logger.add(lambda msg: None)
-    initial_handlers = len(logger._core.handlers)
+    logger.add(lambda _msg: None)
+    initial_handlers = len(logger._core.handlers)  # noqa: SLF001
 
     logging_config.setup_logging(tmp_path)
 
@@ -251,12 +251,12 @@ def test_get_logger_without_name():
     """Test get_logger returns default logger when no name provided."""
     result = logging_config.get_logger()
 
-    assert result is logging_config._logger
+    assert result is logging_config._logger  # noqa: SLF001
 
 
 def test_get_logger_with_name():
     """Test get_logger returns bound logger with provided name."""
-    with patch.object(logging_config._logger, "bind") as mock_bind:
+    with patch.object(logging_config._logger, "bind") as mock_bind:  # noqa: SLF001
         mock_bind.return_value = MagicMock()
 
         result = logging_config.get_logger("test_module")
@@ -276,7 +276,7 @@ def test_get_logger_returns_loguru_logger():
     assert hasattr(result, "warning")
 
 
-def test_get_logger_bound_name_appears_in_logs(tmp_path: Path, capsys):
+def test_get_logger_bound_name_appears_in_logs(tmp_path: Path):
     """Test that bound logger name appears in formatted log output."""
     # Set up logging with a simple format
     logging_config.setup_logging(tmp_path, verbose=True)
@@ -290,6 +290,7 @@ def test_get_logger_bound_name_appears_in_logs(tmp_path: Path, capsys):
 
 def test_module_exports():
     """Test that __all__ exports the expected functions."""
+    expected_exports = 2
     assert "get_logger" in logging_config.__all__
     assert "setup_logging" in logging_config.__all__
-    assert len(logging_config.__all__) == 2
+    assert len(logging_config.__all__) == expected_exports
