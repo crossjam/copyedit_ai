@@ -17,11 +17,10 @@ import mdformat
 import typer
 import typer.main
 from click_default_group import DefaultGroup
-from loguru import logger
 from rich.console import Console
 from rich.status import Status
 
-from .logging_config import setup_logging
+from .logging_config import get_logger, setup_logging
 
 if TYPE_CHECKING:
     from click import Context, Parameter
@@ -32,6 +31,7 @@ from .settings import Settings
 from .user_dir import get_app_config_dir, set_llm_user_path
 
 console = Console(stderr=True)
+logger = get_logger("copyedit")
 
 app = typer.Typer()
 
@@ -340,10 +340,10 @@ def main_callback(
 
     # Enable logging if debug mode or file logging is requested
     if debug or log_path:
-        logger.enable("copyedit")
+        logger.enable("copyedit_ai")
         logger.info(f"{debug=}")
     else:
-        logger.disable("copyedit")
+        logger.disable("copyedit_ai")
 
 
 @app.command(name="edit")

@@ -69,7 +69,7 @@ def test_default_loguru_config_with_file(tmp_path: Path):
     # Second handler is file
     assert config["handlers"][1]["sink"] == log_file
     assert config["handlers"][1]["level"] == "DEBUG"
-    assert config["handlers"][1]["enqueue"] is True
+    assert config["handlers"][1]["enqueue"] is False
 
 
 def test_default_loguru_config_creates_parent_dirs(tmp_path: Path):
