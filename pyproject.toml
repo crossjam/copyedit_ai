@@ -17,6 +17,7 @@ dependencies = [
     "mdformat",
     "mdformat-footnote",
     "mdformat-front-matters",
+    "loguru-config",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
