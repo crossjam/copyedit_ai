@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import tempfile
+from importlib.metadata import version as get_version
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -21,7 +22,7 @@ from rich.console import Console
 from rich.status import Status
 
 if TYPE_CHECKING:
-    import click
+    from click import Context, Parameter
 
 from .copyedit import copyedit, templates_installed
 from .self_subcommand import cli as self_cli
@@ -67,6 +68,18 @@ app.add_typer(
     name="self",
     help="Manage the copyedit_ai command.",
 )
+
+
+@app.command(name="version")
+def version_command() -> None:
+    """Display the version of copyedit_ai."""
+    try:
+        pkg_version = get_version("copyedit_ai")
+        typer.echo(f"copyedit-ai: {pkg_version}")
+    except Exception as error:
+        logger.error(f"Failed to retrieve package version: {error}")
+        typer.echo("Error: Failed to retrieve version", err=True)
+        raise typer.Exit(code=1) from None
 
 
 def _check_word_wrapping_applied(
@@ -429,6 +442,31 @@ def cli() -> None:
     default_group = cast("DefaultGroup", click_group)
     default_group.default_cmd_name = "edit"
     default_group.default_if_no_args = True
+
+    # Add --version/-V option at the Click level
+    def version_callback(ctx: "Context", _param: "Parameter", value: bool) -> None:
+        """Show version and exit."""
+        if not value or ctx.resilient_parsing:
+            return
+        try:
+            pkg_version = get_version("copyedit_ai")
+            click.echo(f"copyedit-ai: {pkg_version}")
+        except Exception:
+            click.echo("Error: Failed to retrieve version", err=True)
+            ctx.exit(1)
+        ctx.exit(0)
+
+    # Add the version option to the Click group
+    default_group.params.append(
+        click.Option(
+            ["--version", "-V"],
+            is_flag=True,
+            expose_value=False,
+            is_eager=True,
+            help="Show the version and exit.",
+            callback=version_callback,
+        )
+    )
 
     existing_templates = templates_installed()
 

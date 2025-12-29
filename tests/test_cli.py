@@ -1,17 +1,63 @@
 """test copyedit_ai CLI: copyedit_ai."""
 
 import importlib
+from importlib.metadata import version as get_version
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 from unittest.mock import MagicMock, create_autospec, patch
 
+import click
 import llm
+import typer.main
+from click.testing import CliRunner as ClickRunner
+from click_default_group import DefaultGroup
 from typer.testing import CliRunner
+
+if TYPE_CHECKING:
+    from click import Context, Parameter
 
 main_module_name = "copyedit_ai.__main__"
 main_module = importlib.import_module(main_module_name)
 runner = CliRunner()
 # Use the Typer app for testing, not the wrapped cli function
 cli = main_module.app
+
+
+def _get_click_cli() -> "DefaultGroup":
+    """Get the Click CLI with DefaultGroup for testing.
+
+    This simulates what the cli() function does.
+    """
+    click_group = typer.main.get_command(main_module.app)
+    click_group.__class__ = DefaultGroup
+    default_group = cast("DefaultGroup", click_group)
+    default_group.default_cmd_name = "edit"
+    default_group.default_if_no_args = True
+
+    # Add --version/-V option
+    def version_callback(ctx: "Context", _param: "Parameter", value: bool) -> None:
+        if not value or ctx.resilient_parsing:
+            return
+        try:
+            pkg_version = get_version("copyedit_ai")
+            click.echo(f"copyedit-ai: {pkg_version}")
+        except Exception:
+            click.echo("Error: Failed to retrieve version", err=True)
+            ctx.exit(1)
+        ctx.exit(0)
+
+    default_group.params.append(
+        click.Option(
+            ["--version", "-V"],
+            is_flag=True,
+            expose_value=False,
+            is_eager=True,
+            help="Show the version and exit.",
+            callback=version_callback,
+        )
+    )
+
+    return default_group
 
 
 def test_cli_help() -> None:
@@ -61,6 +107,31 @@ def test_cli_self_version(project_version: str) -> None:
     result = runner.invoke(cli, ["self", "version"])
     assert result.exit_code == 0
     assert result.output.strip() == project_version
+
+
+def test_cli_version_command(project_version: str) -> None:
+    """Test the top-level version command."""
+    result = runner.invoke(cli, ["version"])
+    assert result.exit_code == 0
+    assert result.output.strip() == f"copyedit-ai: {project_version}"
+
+
+def test_cli_version_option_long(project_version: str) -> None:
+    """Test the --version option."""
+    click_cli = _get_click_cli()
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_cli, ["--version"])
+    assert result.exit_code == 0
+    assert result.output.strip() == f"copyedit-ai: {project_version}"
+
+
+def test_cli_version_option_short(project_version: str) -> None:
+    """Test the -V option."""
+    click_cli = _get_click_cli()
+    click_runner = ClickRunner()
+    result = click_runner.invoke(click_cli, ["-V"])
+    assert result.exit_code == 0
+    assert result.output.strip() == f"copyedit-ai: {project_version}"
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1130,9 +1201,11 @@ def test_cli_word_wrapping_not_executed_with_no_markdown(
     output = result.output
     # The long line should appear as-is in the output
     default_wrap_width = 90
-    assert long_line in output or len(
-        [line for line in output.split("\n") if len(line) > default_wrap_width]
-    ) > 0
+    assert (
+        long_line in output
+        or len([line for line in output.split("\n") if len(line) > default_wrap_width])
+        > 0
+    )
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1375,24 +1448,26 @@ def test_cli_word_wrapping_validation_warning(
 
     # Create multiple very long lines that exceed the wrap width
     # Using .join() is clearer than f-strings for multi-line text
-    long_lines = "\n".join([  # noqa: FLY002
-        (
-            "This is a very long line number one that definitely exceeds the "
-            "wrap width and should trigger a warning if not properly wrapped."
-        ),
-        (
-            "This is a very long line number two that definitely exceeds the "
-            "wrap width and should trigger a warning if not properly wrapped."
-        ),
-        (
-            "This is a very long line number three that definitely exceeds the "
-            "wrap width and should trigger a warning if not properly wrapped."
-        ),
-        (
-            "This is a very long line number four that definitely exceeds the "
-            "wrap width and should trigger a warning if not properly wrapped."
-        ),
-    ])
+    long_lines = "\n".join(
+        [  # noqa: FLY002
+            (
+                "This is a very long line number one that definitely exceeds the "
+                "wrap width and should trigger a warning if not properly wrapped."
+            ),
+            (
+                "This is a very long line number two that definitely exceeds the "
+                "wrap width and should trigger a warning if not properly wrapped."
+            ),
+            (
+                "This is a very long line number three that definitely exceeds the "
+                "wrap width and should trigger a warning if not properly wrapped."
+            ),
+            (
+                "This is a very long line number four that definitely exceeds the "
+                "wrap width and should trigger a warning if not properly wrapped."
+            ),
+        ]
+    )
 
     # Mock the copyedit response
     mock_response = MagicMock()
