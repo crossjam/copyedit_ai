@@ -57,7 +57,7 @@ def _default_loguru_config(level: str, log_file: Path | None) -> dict[str, Any]:
                 "format": _format_record,
                 "backtrace": False,
                 "diagnose": False,
-                "enqueue": True,
+                "enqueue": False,
             }
         )
 
