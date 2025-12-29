@@ -189,7 +189,9 @@ lint.ignore = [
   # first-line-ends-in-period (D415)
   "D415",
   # blank-except (BLE001)
-  "BLE001"
+  "BLE001",
+  # Too many arguments for logging (PLE1205)
+  "PLE1205",
  ]
 
 [tool.ruff.lint.per-file-ignores]
