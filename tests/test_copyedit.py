@@ -46,17 +46,18 @@ def test_system_prompt_includes_frontmatter_protection():
     # Check for general front matter protection instruction
     assert "front matter" in SYSTEM_PROMPT.lower()
     assert "unmodified" in SYSTEM_PROMPT.lower()
-    
+
     # Check for YAML front matter delimiters
     assert "---" in SYSTEM_PROMPT
     assert "YAML" in SYSTEM_PROMPT or "yaml" in SYSTEM_PROMPT.lower()
-    
+
     # Check for TOML front matter delimiters
     assert "+++" in SYSTEM_PROMPT
     assert "TOML" in SYSTEM_PROMPT or "toml" in SYSTEM_PROMPT.lower()
-    
+
     # Check for JSON front matter delimiters
-    assert "{" in SYSTEM_PROMPT and "}" in SYSTEM_PROMPT
+    assert "{" in SYSTEM_PROMPT
+    assert "}" in SYSTEM_PROMPT
     assert "JSON" in SYSTEM_PROMPT or "json" in SYSTEM_PROMPT.lower()
 
 
@@ -151,7 +152,7 @@ This is a test text with some erors."""
     copyedit(text, stream=False)
 
     mock_llm_model.prompt.assert_called_once()
-    
+
     # Verify the prompt includes the full text with front matter
     call_args = mock_llm_model.prompt.call_args
     assert "Copy edit the text that follows:" in call_args[0][0]
@@ -178,7 +179,7 @@ This is a test text with some erors."""
     copyedit(text, stream=False)
 
     mock_llm_model.prompt.assert_called_once()
-    
+
     # Verify the prompt includes the full text with front matter
     call_args = mock_llm_model.prompt.call_args
     assert "Copy edit the text that follows:" in call_args[0][0]
@@ -205,7 +206,7 @@ This is a test text with some erors."""
     copyedit(text, stream=False)
 
     mock_llm_model.prompt.assert_called_once()
-    
+
     # Verify the prompt includes the full text with front matter
     call_args = mock_llm_model.prompt.call_args
     assert "Copy edit the text that follows:" in call_args[0][0]
@@ -240,7 +241,7 @@ This is a test document with erors that need to be corrected."""
     copyedit(text, stream=False)
 
     mock_llm_model.prompt.assert_called_once()
-    
+
     # Verify the prompt includes the full text with front matter
     call_args = mock_llm_model.prompt.call_args
     assert "Copy edit the text that follows:" in call_args[0][0]

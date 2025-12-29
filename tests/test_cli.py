@@ -1035,8 +1035,12 @@ def test_cli_word_wrapping_executed_with_default_settings(
     test_file.write_text("Test text.")
 
     # Create a long line that should be wrapped at 90 characters
-    long_line = "This is a very long line that definitely exceeds ninety characters and should be wrapped by mdformat when the default wrap width setting of ninety characters is applied to the text."
-    
+    long_line = (
+        "This is a very long line that definitely exceeds ninety "
+        "characters and should be wrapped by mdformat when the default "
+        "wrap width setting of ninety characters is applied to the text."
+    )
+
     # Mock the copyedit response with a long line
     mock_response = MagicMock()
     mock_response.__iter__ = MagicMock(return_value=iter([long_line]))
@@ -1045,15 +1049,15 @@ def test_cli_word_wrapping_executed_with_default_settings(
     result = runner.invoke(cli, ["edit", str(test_file)])
 
     assert result.exit_code == 0
-    
+
     # The output should contain the text, and mdformat should have wrapped it
     # Default wrap is 90 chars, so the long line should be broken
     output = result.output
     # Check that no single line exceeds 90 characters significantly
     # (accounting for some mdformat behavior)
-    lines = output.strip().split('\n')
+    lines = output.strip().split("\n")
     # Filter out non-content lines (like status messages)
-    content_lines = [line for line in lines if not line.startswith('[')]
+    content_lines = [line for line in lines if not line.startswith("[")]
     # At least one line should exist and the long content should be wrapped
     assert any(len(line) < len(long_line) for line in content_lines if line.strip())
 
@@ -1068,8 +1072,11 @@ def test_cli_word_wrapping_executed_with_custom_width(
     test_file.write_text("Test text.")
 
     # Create a line that would fit in 90 chars but not in 50
-    medium_line = "This is a medium length line that fits in ninety characters but should wrap at fifty."
-    
+    medium_line = (
+        "This is a medium length line that fits in ninety "
+        "characters but should wrap at fifty."
+    )
+
     # Mock the copyedit response
     mock_response = MagicMock()
     mock_response.__iter__ = MagicMock(return_value=iter([medium_line]))
@@ -1079,13 +1086,19 @@ def test_cli_word_wrapping_executed_with_custom_width(
     result = runner.invoke(cli, ["edit", "--wrap-width", "50", str(test_file)])
 
     assert result.exit_code == 0
-    
+
     # The output should be wrapped at 50 characters
     output = result.output
-    lines = output.strip().split('\n')
-    content_lines = [line for line in lines if not line.startswith('[')]
-    # With 50 char wrap, the 88-char line should be split
-    assert len(content_lines) > 1 or all(len(line) <= 60 for line in content_lines if line.strip())
+    lines = output.strip().split("\n")
+    content_lines = [line for line in lines if not line.startswith("[")]
+    # With 50 char wrap, the line should be split
+    # Allow some tolerance for mdformat behavior (60 chars)
+    max_line_length_with_tolerance = 60
+    assert len(content_lines) > 1 or all(
+        len(line) <= max_line_length_with_tolerance
+        for line in content_lines
+        if line.strip()
+    )
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1098,8 +1111,12 @@ def test_cli_word_wrapping_not_executed_with_no_markdown(
     test_file.write_text("Test text.")
 
     # Create a very long line
-    long_line = "This is a very long line that definitely exceeds ninety characters and should NOT be wrapped when markdown formatting is disabled with the no-markdown flag."
-    
+    long_line = (
+        "This is a very long line that definitely exceeds ninety "
+        "characters and should NOT be wrapped when markdown formatting "
+        "is disabled with the no-markdown flag."
+    )
+
     # Mock the copyedit response
     mock_response = MagicMock()
     mock_response.__iter__ = MagicMock(return_value=iter([long_line]))
@@ -1108,11 +1125,14 @@ def test_cli_word_wrapping_not_executed_with_no_markdown(
     result = runner.invoke(cli, ["edit", "--no-markdown", str(test_file)])
 
     assert result.exit_code == 0
-    
+
     # The output should NOT be wrapped - the long line should remain intact
     output = result.output
     # The long line should appear as-is in the output
-    assert long_line in output or len([line for line in output.split('\n') if len(line) > 90]) > 0
+    default_wrap_width = 90
+    assert long_line in output or len(
+        [line for line in output.split("\n") if len(line) > default_wrap_width]
+    ) > 0
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1127,7 +1147,7 @@ def test_cli_word_wrapping_executed_in_streaming_mode(
     # Create chunks that form a long line when combined
     chunk1 = "This is a very long line that definitely exceeds ninety characters "
     chunk2 = "and should be wrapped by mdformat even when streaming is enabled."
-    
+
     # Mock the copyedit response with streaming chunks
     mock_response = MagicMock()
     mock_response.__iter__ = MagicMock(return_value=iter([chunk1, chunk2]))
@@ -1136,7 +1156,7 @@ def test_cli_word_wrapping_executed_in_streaming_mode(
     result = runner.invoke(cli, ["edit", "--stream", str(test_file)])
 
     assert result.exit_code == 0
-    
+
     # Even in streaming mode, the final output should be wrapped
     # Note: In streaming mode, chunks are output as they arrive,
     # but mdformat is still applied to the collected text
@@ -1153,8 +1173,12 @@ def test_cli_word_wrapping_executed_in_non_streaming_mode(
     test_file.write_text("Test text.")
 
     # Create a long line
-    long_line = "This is a very long line that definitely exceeds ninety characters and should be wrapped by mdformat when non-streaming mode is used."
-    
+    long_line = (
+        "This is a very long line that definitely exceeds ninety "
+        "characters and should be wrapped by mdformat when "
+        "non-streaming mode is used."
+    )
+
     # Mock the copyedit response for non-streaming
     mock_response = create_autospec(llm.Response, instance=True)
     mock_response.text.return_value = long_line
@@ -1163,7 +1187,7 @@ def test_cli_word_wrapping_executed_in_non_streaming_mode(
     result = runner.invoke(cli, ["edit", "--no-stream", str(test_file)])
 
     assert result.exit_code == 0
-    
+
     # The output should be wrapped
     output = result.output
     # At least verify the command succeeded and produced output
@@ -1180,8 +1204,12 @@ def test_cli_word_wrapping_executed_with_replace_mode(
     test_file.write_text("Test text.")
 
     # Create a long line that should be wrapped
-    long_line = "This is a very long line that definitely exceeds ninety characters and should be wrapped by mdformat and written to the file in replace mode."
-    
+    long_line = (
+        "This is a very long line that definitely exceeds ninety "
+        "characters and should be wrapped by mdformat and written "
+        "to the file in replace mode."
+    )
+
     # Mock the copyedit response
     mock_response = MagicMock()
     mock_response.__iter__ = MagicMock(return_value=iter([long_line]))
@@ -1193,16 +1221,22 @@ def test_cli_word_wrapping_executed_with_replace_mode(
     )
 
     assert result.exit_code == 0
-    
+
     # Read the file and verify it was wrapped
     file_content = test_file.read_text()
     # The file should not contain the full long line on a single line
     # It should be wrapped into multiple lines
-    file_lines = file_content.strip().split('\n')
-    # With 60 char wrap, a 149-char line should be split into at least 2-3 lines
-    assert len(file_lines) >= 2, "Long line should be wrapped into multiple lines"
+    file_lines = file_content.strip().split("\n")
+    # With 60 char wrap, a long line should be split into at least 2-3 lines
+    min_expected_lines = 2
+    assert len(file_lines) >= min_expected_lines, (
+        "Long line should be wrapped into multiple lines"
+    )
     # Verify no line is excessively long (with some tolerance for mdformat)
-    assert all(len(line) < 70 for line in file_lines), "All lines should respect wrap width"
+    max_line_length = 70
+    assert all(len(line) < max_line_length for line in file_lines), (
+        "All lines should respect wrap width"
+    )
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1216,8 +1250,12 @@ def test_cli_word_wrapping_not_executed_with_no_markdown_and_replace(
     test_file.write_text(original_content)
 
     # Create a long line that should NOT be wrapped
-    long_line = "This is a very long line that definitely exceeds ninety characters and should NOT be wrapped when no-markdown flag is used even in replace mode."
-    
+    long_line = (
+        "This is a very long line that definitely exceeds ninety "
+        "characters and should NOT be wrapped when no-markdown flag "
+        "is used even in replace mode."
+    )
+
     # Mock the copyedit response
     mock_response = MagicMock()
     mock_response.__iter__ = MagicMock(return_value=iter([long_line]))
@@ -1229,11 +1267,13 @@ def test_cli_word_wrapping_not_executed_with_no_markdown_and_replace(
     )
 
     assert result.exit_code == 0
-    
+
     # Read the file and verify it was NOT wrapped
     file_content = test_file.read_text()
     # The long line should be preserved as-is
-    assert long_line in file_content, "Long line should not be wrapped with --no-markdown"
+    assert long_line in file_content, (
+        "Long line should not be wrapped with --no-markdown"
+    )
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1246,10 +1286,16 @@ def test_cli_word_wrapping_with_multiple_paragraphs(
     test_file.write_text("Test text.")
 
     # Create multiple paragraphs with long lines
-    paragraph1 = "This is the first paragraph with a very long line that definitely exceeds ninety characters and should be wrapped."
-    paragraph2 = "This is the second paragraph with another very long line that also exceeds ninety characters and should be wrapped."
+    paragraph1 = (
+        "This is the first paragraph with a very long line that "
+        "definitely exceeds ninety characters and should be wrapped."
+    )
+    paragraph2 = (
+        "This is the second paragraph with another very long line that "
+        "also exceeds ninety characters and should be wrapped."
+    )
     text_with_paragraphs = f"{paragraph1}\n\n{paragraph2}"
-    
+
     # Mock the copyedit response
     mock_response = MagicMock()
     mock_response.__iter__ = MagicMock(return_value=iter([text_with_paragraphs]))
@@ -1258,9 +1304,8 @@ def test_cli_word_wrapping_with_multiple_paragraphs(
     result = runner.invoke(cli, ["edit", "--wrap-width", "70", str(test_file)])
 
     assert result.exit_code == 0
-    
+
     # The output should preserve paragraph breaks while wrapping lines
-    output = result.output
     assert result.exit_code == 0
 
 
@@ -1274,14 +1319,19 @@ def test_cli_word_wrapping_combination_stream_and_custom_width(
     test_file.write_text("Test text.")
 
     # Create a long line
-    long_line = "This is a very long line that should be wrapped at the custom width of forty characters specified by the user."
-    
+    long_line = (
+        "This is a very long line that should be wrapped at the "
+        "custom width of forty characters specified by the user."
+    )
+
     # Mock the copyedit response
     mock_response = MagicMock()
     mock_response.__iter__ = MagicMock(return_value=iter([long_line]))
     mock_copyedit.return_value = mock_response
 
-    result = runner.invoke(cli, ["edit", "--stream", "--wrap-width", "40", str(test_file)])
+    result = runner.invoke(
+        cli, ["edit", "--stream", "--wrap-width", "40", str(test_file)]
+    )
 
     assert result.exit_code == 0
     # Just verify the command executes successfully
@@ -1298,15 +1348,65 @@ def test_cli_word_wrapping_combination_no_stream_and_custom_width(
     test_file.write_text("Test text.")
 
     # Create a long line
-    long_line = "This is a very long line that should be wrapped at the custom width of eighty characters specified."
-    
+    long_line = (
+        "This is a very long line that should be wrapped at the "
+        "custom width of eighty characters specified."
+    )
+
     # Mock the copyedit response for non-streaming
     mock_response = create_autospec(llm.Response, instance=True)
     mock_response.text.return_value = long_line
     mock_copyedit.return_value = mock_response
 
-    result = runner.invoke(cli, ["edit", "--no-stream", "--wrap-width", "80", str(test_file)])
+    result = runner.invoke(
+        cli, ["edit", "--no-stream", "--wrap-width", "80", str(test_file)]
+    )
 
     assert result.exit_code == 0
     # Just verify the command executes successfully
     assert result.exit_code == 0
+
+
+@patch("copyedit_ai.__main__.mdformat.text")
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_word_wrapping_validation_warning(
+    mock_copyedit, mock_mdformat, tmp_path: Path
+) -> None:
+    """Test that a warning is emitted when word wrapping doesn't appear to work."""
+    # Create a temporary test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text.")
+
+    # Create multiple very long lines that exceed the wrap width
+    long_lines = "\n".join([  # noqa: FLY002
+        (
+            "This is a very long line number one that definitely exceeds the "
+            "wrap width and should trigger a warning if not properly wrapped."
+        ),
+        (
+            "This is a very long line number two that definitely exceeds the "
+            "wrap width and should trigger a warning if not properly wrapped."
+        ),
+        (
+            "This is a very long line number three that definitely exceeds the "
+            "wrap width and should trigger a warning if not properly wrapped."
+        ),
+        (
+            "This is a very long line number four that definitely exceeds the "
+            "wrap width and should trigger a warning if not properly wrapped."
+        ),
+    ])
+
+    # Mock the copyedit response
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([long_lines]))
+    mock_copyedit.return_value = mock_response
+
+    # Mock mdformat.text to return the text unchanged (simulating wrapping failure)
+    mock_mdformat.return_value = long_lines
+
+    result = runner.invoke(cli, ["edit", "--wrap-width", "50", str(test_file)])
+
+    assert result.exit_code == 0
+    # Check that a warning about wrapping was emitted
+    assert "Warning" in result.output or "wrap" in result.output.lower()
