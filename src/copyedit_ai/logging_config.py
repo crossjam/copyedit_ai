@@ -47,6 +47,7 @@ Log records are formatted via :func:`_format_record`, which ensures that
 Loguru record ``name`` is used as a fallback. The ``logger_name`` field is
 then rendered in the log line according to :data:`LOG_FORMAT`.
 """
+
 from __future__ import annotations
 
 import os
@@ -128,7 +129,7 @@ def setup_logging(
     verbose: bool = False,
     quiet: bool = False,
     log_file: Path | None = None,
-    enable_file_logging: Optional[bool] = None,
+    enable_file_logging: bool | None = None,
 ) -> None:
     """Configure loguru logging for the application.
 
@@ -150,6 +151,7 @@ def setup_logging(
             file logging is enabled (using ``log_file`` if provided). When
             False, file logging is disabled even if ``log_file`` is set. When
             None, file logging is enabled only if ``log_file`` is not None.
+
     """
     # Determine log level with precedence: quiet > verbose > default
     if quiet:
