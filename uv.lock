@@ -179,6 +179,7 @@ source = { editable = "." }
 dependencies = [
     { name = "llm" },
     { name = "loguru" },
+    { name = "loguru-config" },
     { name = "mdformat" },
     { name = "mdformat-footnote" },
     { name = "mdformat-front-matters" },
@@ -211,6 +212,7 @@ docs = [
 requires-dist = [
     { name = "llm" },
     { name = "loguru" },
+    { name = "loguru-config" },
     { name = "mdformat" },
     { name = "mdformat-footnote" },
     { name = "mdformat-front-matters" },
@@ -562,6 +564,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/3a/05/a1dae3dffd1116099
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl", hash = "sha256:31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c", size = 61595, upload-time = "2024-12-06T11:20:54.538Z" },
 ]
+
+[[package]]
+name = "loguru-config"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "loguru" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2e/c7/e9528e9439214e885ce04fb68725ee1d10d64f333a9d68c9ea1545089cab/loguru-config-0.1.0.tar.gz", hash = "sha256:432fbc134b118cdfbe0de0226eaab3f5247fc142cd005bf1ebe471f7c572aa34", size = 15129, upload-time = "2023-07-15T11:55:48.381Z" }
 
 [[package]]
 name = "markdown"

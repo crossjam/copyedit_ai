@@ -17,9 +17,10 @@ import mdformat
 import typer
 import typer.main
 from click_default_group import DefaultGroup
-from loguru import logger
 from rich.console import Console
 from rich.status import Status
+
+from .logging_config import get_logger, setup_logging
 
 if TYPE_CHECKING:
     from click import Context, Parameter
@@ -27,9 +28,10 @@ if TYPE_CHECKING:
 from .copyedit import copyedit, templates_installed
 from .self_subcommand import cli as self_cli
 from .settings import Settings
-from .user_dir import set_llm_user_path
+from .user_dir import get_app_config_dir
 
 console = Console(stderr=True)
+logger = get_logger("copyedit")
 
 app = typer.Typer()
 
@@ -83,7 +85,7 @@ def _get_package_version() -> str:
     try:
         return get_version("copyedit_ai")
     except Exception as error:
-        logger.error(f"Failed to retrieve package version: {error}")
+        logger.exception("Failed to retrieve package version:")
         msg = "Error: Failed to retrieve version"
         raise RuntimeError(msg) from error
 
@@ -134,9 +136,12 @@ def _check_word_wrapping_applied(
         threshold_percentage = 0.1
         if total_lines > 0 and (long_line_count / total_lines) > threshold_percentage:
             logger.warning(
-                f"Word wrapping may not have been applied correctly. "
-                f"Found {long_line_count} lines exceeding {max_allowed_length} "
-                f"characters (wrap width: {wrap_width}, tolerance: {tolerance})"
+                "Word wrapping may not have been applied correctly. "
+                "Found {long_line_count} lines exceeding {} "
+                "characters (wrap width: {}, tolerance: {})",
+                max_allowed_length,
+                wrap_width,
+                tolerance,
             )
             # Rich Console (configured with stderr=True) prints to stderr by default
             console.print(
@@ -172,7 +177,7 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
     # Read input text
     source_name = str(file_path) if file_path else "stdin"
     if file_path:
-        logger.info(f"Reading from file: {file_path}")
+        logger.info("Reading from file: {}", file_path)
         text = file_path.read_text()
     else:
         logger.info("Reading from stdin")
@@ -213,6 +218,24 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
         # Collect the output
         output_text = ""
         if stream:
+            if stream and markdown:
+                logger.warning(
+                    "Streaming output response does not"
+                    "incorporate word wrapping to the console."
+                )
+                click.secho(
+                    "Streaming output response does not"
+                    "incorporate word wrapping to the console.",
+                    fg="yellow",
+                )
+                logger.warning(
+                    "LLM response text may present lines long then wrap width."
+                )
+                click.secho(
+                    "LLM response text may present lines long then wrap width.",
+                    fg="yellow",
+                )
+
             # Stream output and collect it
             chunks = []
             first_chunk = True
@@ -267,7 +290,7 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 with temp_path.open("w") as temp_file:
                     temp_file.write(output_text)
 
-                logger.info(f"Wrote copyedited content to temporary file: {temp_path}")
+                logger.info("Wrote copyedited content to temporary file: {}", temp_path)
 
                 # Prompt user for confirmation
                 typer.echo(f"\nCopyedited content written to: {temp_path}")
@@ -281,11 +304,11 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     # Create backup of original file
                     backup_path = file_path.with_suffix(file_path.suffix + ".bak")
                     shutil.copy2(file_path, backup_path)
-                    logger.info(f"Created backup: {backup_path}")
+                    logger.info("Created backup: {}", backup_path)
 
                     # Replace original with temp file
                     shutil.copy2(temp_path, file_path)
-                    logger.info(f"Replaced {file_path} with copyedited version")
+                    logger.info("Replaced {} with copyedited version", file_path)
 
                     typer.secho(
                         f"✓ File replaced successfully. Backup saved to: {backup_path}",
@@ -326,18 +349,22 @@ def main_callback(
     """Copyedit text from the CLI using AI"""
     ctx.obj = Settings()
     debug = debug or ctx.obj.debug
-
-    set_llm_user_path()
-    # Only add file logging if explicitly requested
     log_path = log_file or ctx.obj.log_file
+
+    setup_logging(
+        get_app_config_dir(),
+        verbose=debug,
+        log_file=log_path,
+        enable_file_logging=None if log_path else False,
+    )
 
     # Enable logging if debug mode or file logging is requested
     if debug or log_path:
         logger.enable("copyedit_ai")
         if log_path:
-            logger.add(str(log_path))
-            logger.info(f"Logging to file: {log_path}")
-        logger.info(f"{debug=}")
+            logger.info("Logging to file: {}", log_path)
+        msg = f"{debug=}"
+        logger.info(msg)
     else:
         logger.disable("copyedit_ai")
 
@@ -387,20 +414,21 @@ def edit_command(  # noqa: PLR0913
     The copyedited text and a summary of changes are output to stdout.
 
     Examples:
-        copyedit_ai < draft.txt
-        copyedit_ai draft.txt
-        cat draft.txt | copyedit_ai -m claude-opus
-        copyedit_ai draft.txt --replace
+        copyedit < draft.txt
+        copyedit draft.txt
+        cat draft.txt | copyedit -m claude-opus
+        copyedit draft.txt --replace
 
     """
     settings: Settings = ctx.obj
+
     _perform_copyedit(settings, file_path, model, stream, replace, wrap_width, markdown)
 
 
 def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
     """Attach llm's command groups to the 'self' subcommand.
 
-    This allows users to access llm's native commands within copyedit_ai's
+    This allows users to access llm's native commands within copyedit's
     isolated configuration context.
 
     Args:
@@ -438,15 +466,15 @@ def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
     for cmd_name in passthrough_commands:
         # Don't override existing commands
         if cmd_name in self_command.commands:
-            logger.debug(f"Skipping llm command {cmd_name} - already exists")
+            logger.debug("Skipping llm command {} - already exists", cmd_name)
             continue
 
         llm_command = llm_cli.commands.get(cmd_name)
         if llm_command:
             self_command.add_command(llm_command, name=cmd_name)
-            logger.debug(f"Attached llm command: {cmd_name}")
+            logger.debug("Attached llm command: {}", cmd_name)
         else:
-            logger.warning(f"Could not find llm command: {cmd_name}")
+            logger.warning("Could not find llm command: {}", cmd_name)
 
 
 def setup_click_group() -> "DefaultGroup":
