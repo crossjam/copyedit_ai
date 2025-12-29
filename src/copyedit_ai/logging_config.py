@@ -1,5 +1,52 @@
-"""Centralized logging configuration"""
+"""Centralized logging configuration for the Copyedit application.
 
+This module provides a thin wrapper around Loguru so that logging can be
+configured in one place and used consistently across the codebase.
+
+Usage
+-----
+
+1. Call :func:`setup_logging` once at application startup, passing the
+   application directory and any CLI flags that affect verbosity:
+
+   >>> from pathlib import Path
+   >>> from copyedit_ai.logging_config import setup_logging, get_logger
+   >>> setup_logging(Path(app_dir), verbose=True)
+   >>> log = get_logger("my_component")
+   >>> log.info("Ready")
+
+2. In modules that need logging, obtain a logger via :func:`get_logger`:
+
+   * ``get_logger()`` returns the shared Loguru logger as-is.
+   * ``get_logger("name")`` returns a logger with ``extra["logger_name"]``
+     bound to the given name so it appears in the log output.
+
+Configuration precedence
+-------------------------
+
+When :func:`setup_logging` is called, logging configuration is resolved with
+the following precedence (highest to lowest):
+
+1. The path specified by the ``COPYEDIT_LOG_CONFIG`` environment variable,
+   if it points to a valid configuration file understood by
+   :class:`loguru_config.LoguruConfig`.
+2. A ``logging.json`` file (see :data:`DEFAULT_CONFIG_FILENAME`) located in
+   the provided ``app_dir``.
+3. The built-in default configuration created by :func:`_default_loguru_config`,
+   using the computed log level and optional file sink.
+
+If either external configuration source (1) or (2) is successfully loaded,
+the default configuration is not applied.
+
+Logger naming pattern
+---------------------
+
+Log records are formatted via :func:`_format_record`, which ensures that
+``extra["logger_name"]`` is present. If a logger name has been bound via
+:func:`get_logger("name")`, that value is used; otherwise the underlying
+Loguru record ``name`` is used as a fallback. The ``logger_name`` field is
+then rendered in the log line according to :data:`LOG_FORMAT`.
+"""
 from __future__ import annotations
 
 import os
@@ -81,13 +128,28 @@ def setup_logging(
     verbose: bool = False,
     quiet: bool = False,
     log_file: Path | None = None,
-    enable_file_logging: bool | None = None,
+    enable_file_logging: Optional[bool] = None,
 ) -> None:
     """Configure loguru logging for the application.
 
     External configuration can be supplied via the ``COPYEDIT_LOG_CONFIG``
     environment variable or by placing a ``logging.json`` file in the
     application directory.
+
+    Args:
+        app_dir: Directory to search for a ``logging.json`` configuration
+            file when no explicit configuration file is provided via the
+            ``COPYEDIT_LOG_CONFIG`` environment variable.
+        verbose: If True and ``quiet`` is False, set the log level to
+            ``DEBUG`` instead of the default ``INFO`` level.
+        quiet: If True, set the log level to ``ERROR`` regardless of the
+            value of ``verbose`` (takes precedence over ``verbose``).
+        log_file: Optional path to a log file. When file logging is enabled,
+            log messages will also be written to this file.
+        enable_file_logging: Explicit control over file logging. When True,
+            file logging is enabled (using ``log_file`` if provided). When
+            False, file logging is disabled even if ``log_file`` is set. When
+            None, file logging is enabled only if ``log_file`` is not None.
     """
     # Determine log level with precedence: quiet > verbose > default
     if quiet:

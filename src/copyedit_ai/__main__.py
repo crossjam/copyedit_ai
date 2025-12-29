@@ -341,6 +341,8 @@ def main_callback(
     # Enable logging if debug mode or file logging is requested
     if debug or log_path:
         logger.enable("copyedit_ai")
+        if log_path:
+            logger.info(f"Logging to file: {log_path}")
         logger.info(f"{debug=}")
     else:
         logger.disable("copyedit_ai")
