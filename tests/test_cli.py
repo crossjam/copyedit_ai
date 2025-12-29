@@ -1,12 +1,14 @@
 """test copyedit_ai CLI: copyedit_ai."""
 
 import importlib
+import tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, create_autospec, patch
 
 import llm
 from click.testing import CliRunner as ClickRunner
+from loguru import logger as loguru_logger
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
@@ -35,9 +37,6 @@ def test_cli_help() -> None:
 
 def test_cli_entry_points_exist() -> None:
     """Test that both copyedit and copyedit_ai entry points are defined."""
-    import tomllib  # noqa: PLC0415
-    from pathlib import Path  # noqa: PLC0415
-
     # Read pyproject.toml
     pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
     with pyproject_path.open("rb") as f:
@@ -51,9 +50,9 @@ def test_cli_entry_points_exist() -> None:
     # Verify both point to the same function
     assert scripts["copyedit_ai"] == "copyedit_ai.__main__:cli"
     assert scripts["copyedit"] == "copyedit_ai.__main__:cli"
-    assert (
-        scripts["copyedit"] == scripts["copyedit_ai"]
-    ), "Both entry points should point to the same function"
+    assert scripts["copyedit"] == scripts["copyedit_ai"], (
+        "Both entry points should point to the same function"
+    )
 
 
 def test_cli_self_no_arguments() -> None:
@@ -390,9 +389,9 @@ def test_cli_self_has_passthrough_commands() -> None:
         "plugins",
     ]
     for cmd_name in expected_commands:
-        assert (
-            cmd_name in self_command.commands
-        ), f"Expected {cmd_name} in self commands"
+        assert cmd_name in self_command.commands, (
+            f"Expected {cmd_name} in self commands"
+        )
 
 
 def test_cli_self_templates_help() -> None:
@@ -688,8 +687,6 @@ def test_cli_no_log_file_by_default(mock_copyedit, tmp_path: Path) -> None:
 @patch("copyedit_ai.__main__.copyedit")
 def test_cli_with_log_file_option(mock_copyedit, tmp_path: Path) -> None:
     """Test that log file is created when --log-file is specified."""
-    from loguru import logger as loguru_logger
-
     # Create a temporary test file
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test text.")
@@ -1275,14 +1272,14 @@ def test_cli_word_wrapping_executed_with_replace_mode(
     file_lines = file_content.strip().split("\n")
     # With 60 char wrap, a long line should be split into at least 2-3 lines
     min_expected_lines = 2
-    assert (
-        len(file_lines) >= min_expected_lines
-    ), "Long line should be wrapped into multiple lines"
+    assert len(file_lines) >= min_expected_lines, (
+        "Long line should be wrapped into multiple lines"
+    )
     # Verify no line is excessively long (with some tolerance for mdformat)
     max_line_length = 70
-    assert all(
-        len(line) < max_line_length for line in file_lines
-    ), "All lines should respect wrap width"
+    assert all(len(line) < max_line_length for line in file_lines), (
+        "All lines should respect wrap width"
+    )
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1317,9 +1314,9 @@ def test_cli_word_wrapping_not_executed_with_no_markdown_and_replace(
     # Read the file and verify it was NOT wrapped
     file_content = test_file.read_text()
     # The long line should be preserved as-is
-    assert (
-        long_line in file_content
-    ), "Long line should not be wrapped with --no-markdown"
+    assert long_line in file_content, (
+        "Long line should not be wrapped with --no-markdown"
+    )
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1422,7 +1419,7 @@ def test_cli_word_wrapping_validation_warning(
 
     # Create multiple very long lines that exceed the wrap width
     # Using .join() is clearer than f-strings for multi-line text
-    long_lines = "\n".join(
+    long_lines = "\n".join(  # noqa: FLY002
         [
             (
                 "This is a very long line number one that definitely exceeds the "

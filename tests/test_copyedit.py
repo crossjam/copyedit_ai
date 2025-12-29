@@ -63,7 +63,9 @@ def test_system_prompt_includes_frontmatter_protection():
 
 @patch("copyedit_ai.copyedit.load_template")
 @patch("copyedit_ai.copyedit.llm")
-def test_copyedit_with_model_name(mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template):
+def test_copyedit_with_model_name(
+    mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template
+):
     """Test copyedit with a specific model name."""
     mock_llm.get_model.return_value = mock_llm_model
     mock_llm_model.prompt.return_value = mock_llm_response
@@ -86,7 +88,9 @@ def test_copyedit_with_model_name(mock_llm, mock_load_template, mock_llm_model, 
 
 @patch("copyedit_ai.copyedit.load_template")
 @patch("copyedit_ai.copyedit.llm")
-def test_copyedit_without_model_name(mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template):
+def test_copyedit_without_model_name(
+    mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template
+):
     """Test copyedit without specifying a model name."""
     mock_llm.get_model.return_value = mock_llm_model
     mock_llm_model.prompt.return_value = mock_llm_response
@@ -103,7 +107,9 @@ def test_copyedit_without_model_name(mock_llm, mock_load_template, mock_llm_mode
 
 @patch("copyedit_ai.copyedit.load_template")
 @patch("copyedit_ai.copyedit.llm")
-def test_copyedit_streaming(mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template):
+def test_copyedit_streaming(
+    mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template
+):
     """Test copyedit with streaming enabled."""
     mock_llm.get_model.return_value = mock_llm_model
     mock_llm_model.prompt.return_value = mock_llm_response
@@ -119,7 +125,9 @@ def test_copyedit_streaming(mock_llm, mock_load_template, mock_llm_model, mock_l
 
 @patch("copyedit_ai.copyedit.load_template")
 @patch("copyedit_ai.copyedit.llm")
-def test_copyedit_no_streaming(mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template):
+def test_copyedit_no_streaming(
+    mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template
+):
     """Test copyedit with streaming disabled."""
     mock_llm.get_model.return_value = mock_llm_model
     mock_llm_model.prompt.return_value = mock_llm_response
@@ -135,7 +143,9 @@ def test_copyedit_no_streaming(mock_llm, mock_load_template, mock_llm_model, moc
 
 @patch("copyedit_ai.copyedit.load_template")
 @patch("copyedit_ai.copyedit.llm")
-def test_copyedit_with_yaml_frontmatter(mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template):
+def test_copyedit_with_yaml_frontmatter(
+    mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template
+):
     """Test copyedit with YAML front matter."""
     mock_llm.get_model.return_value = mock_llm_model
     mock_llm_model.prompt.return_value = mock_llm_response
@@ -162,7 +172,9 @@ This is a test text with some erors."""
 
 @patch("copyedit_ai.copyedit.load_template")
 @patch("copyedit_ai.copyedit.llm")
-def test_copyedit_with_toml_frontmatter(mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template):
+def test_copyedit_with_toml_frontmatter(
+    mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template
+):
     """Test copyedit with TOML front matter."""
     mock_llm.get_model.return_value = mock_llm_model
     mock_llm_model.prompt.return_value = mock_llm_response
@@ -189,7 +201,9 @@ This is a test text with some erors."""
 
 @patch("copyedit_ai.copyedit.load_template")
 @patch("copyedit_ai.copyedit.llm")
-def test_copyedit_with_json_frontmatter(mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template):
+def test_copyedit_with_json_frontmatter(
+    mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template
+):
     """Test copyedit with JSON front matter."""
     mock_llm.get_model.return_value = mock_llm_model
     mock_llm_model.prompt.return_value = mock_llm_response
@@ -216,7 +230,9 @@ This is a test text with some erors."""
 
 @patch("copyedit_ai.copyedit.load_template")
 @patch("copyedit_ai.copyedit.llm")
-def test_copyedit_with_complex_yaml_frontmatter(mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template):
+def test_copyedit_with_complex_yaml_frontmatter(
+    mock_llm, mock_load_template, mock_llm_model, mock_llm_response, mock_template
+):
     """Test copyedit with complex YAML front matter including nested structures."""
     mock_llm.get_model.return_value = mock_llm_model
     mock_llm_model.prompt.return_value = mock_llm_response
