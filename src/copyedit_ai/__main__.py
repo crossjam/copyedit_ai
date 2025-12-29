@@ -69,6 +69,52 @@ app.add_typer(
 )
 
 
+def _check_word_wrapping_applied(
+    text: str, wrap_width: int, markdown_enabled: bool
+) -> None:
+    """Check if word wrapping was properly applied to the text.
+
+    Emits a warning if markdown formatting is enabled but the text
+    doesn't appear to be properly wrapped.
+
+    Args:
+        text: The formatted text to check
+        wrap_width: The expected wrap width
+        markdown_enabled: Whether markdown formatting was enabled
+
+    """
+    if not markdown_enabled:
+        # No wrapping expected
+        return
+
+    # Check if any lines significantly exceed the wrap width
+    # Allow some tolerance for edge cases (e.g., long URLs, code blocks)
+    tolerance = 20  # Allow lines up to wrap_width + 20
+    max_allowed_length = wrap_width + tolerance
+
+    lines = text.split("\n")
+    long_lines = [line for line in lines if len(line) > max_allowed_length]
+
+    if long_lines:
+        # Count how many lines are too long
+        long_line_count = len(long_lines)
+        total_lines = len([line for line in lines if line.strip()])
+
+        # If more than 10% of lines are too long, emit a warning
+        threshold_percentage = 0.1
+        if total_lines > 0 and (long_line_count / total_lines) > threshold_percentage:
+            logger.warning(
+                f"Word wrapping may not have been applied correctly. "
+                f"Found {long_line_count} lines exceeding {max_allowed_length} "
+                f"characters (wrap width: {wrap_width}, tolerance: {tolerance})"
+            )
+            # Rich Console (configured with stderr=True) prints to stderr by default
+            console.print(
+                f"[yellow]Warning:[/yellow] Some lines exceed the wrap width of "
+                f"{wrap_width} characters. The content may not be properly wrapped."
+            )
+
+
 def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
     settings: Settings,
     file_path: Path | None,
@@ -154,6 +200,8 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
             output_text = "".join(chunks)
             if markdown:
                 output_text = mdformat.text(output_text, options={"wrap": wrap_width})
+                # Check if wrapping was properly applied
+                _check_word_wrapping_applied(output_text, wrap_width, markdown)
             if not replace:
                 typer.echo()  # Final newline
             else:
@@ -166,6 +214,8 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
             output_text = response.text()
             if markdown:
                 output_text = mdformat.text(output_text, options={"wrap": wrap_width})
+                # Check if wrapping was properly applied
+                _check_word_wrapping_applied(output_text, wrap_width, markdown)
             # Stop spinner after API call completes
             status.stop()
             if not replace:
@@ -289,7 +339,7 @@ def edit_command(  # noqa: PLR0913
         help="Replace the original file after confirmation. Creates a .bak backup.",
     ),
     wrap_width: int = typer.Option(
-        90,
+        80,
         "--wrap-width",
         "-w",
         min=1,
