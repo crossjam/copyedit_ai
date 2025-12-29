@@ -51,9 +51,9 @@ def test_cli_entry_points_exist() -> None:
     # Verify both point to the same function
     assert scripts["copyedit_ai"] == "copyedit_ai.__main__:cli"
     assert scripts["copyedit"] == "copyedit_ai.__main__:cli"
-    assert scripts["copyedit"] == scripts["copyedit_ai"], (
-        "Both entry points should point to the same function"
-    )
+    assert (
+        scripts["copyedit"] == scripts["copyedit_ai"]
+    ), "Both entry points should point to the same function"
 
 
 def test_cli_self_no_arguments() -> None:
@@ -390,9 +390,9 @@ def test_cli_self_has_passthrough_commands() -> None:
         "plugins",
     ]
     for cmd_name in expected_commands:
-        assert cmd_name in self_command.commands, (
-            f"Expected {cmd_name} in self commands"
-        )
+        assert (
+            cmd_name in self_command.commands
+        ), f"Expected {cmd_name} in self commands"
 
 
 def test_cli_self_templates_help() -> None:
@@ -751,7 +751,7 @@ def test_cli_startup_message_with_stdin(mock_copyedit) -> None:
 @patch("copyedit_ai.__main__.mdformat.text")
 @patch("copyedit_ai.__main__.copyedit")
 def test_cli_wrap_width_default(mock_copyedit, mock_mdformat, tmp_path: Path) -> None:
-    """Test that the default wrap width is 90."""
+    """Test that the default wrap width is 80."""
     # Create a temporary test file
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test text.")
@@ -770,7 +770,7 @@ def test_cli_wrap_width_default(mock_copyedit, mock_mdformat, tmp_path: Path) ->
     mock_copyedit.assert_called_once()
 
     # Verify mdformat.text was called with default wrap width of 90
-    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 90})
+    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 80})
 
 
 @patch("copyedit_ai.__main__.mdformat.text")
@@ -1268,14 +1268,14 @@ def test_cli_word_wrapping_executed_with_replace_mode(
     file_lines = file_content.strip().split("\n")
     # With 60 char wrap, a long line should be split into at least 2-3 lines
     min_expected_lines = 2
-    assert len(file_lines) >= min_expected_lines, (
-        "Long line should be wrapped into multiple lines"
-    )
+    assert (
+        len(file_lines) >= min_expected_lines
+    ), "Long line should be wrapped into multiple lines"
     # Verify no line is excessively long (with some tolerance for mdformat)
     max_line_length = 70
-    assert all(len(line) < max_line_length for line in file_lines), (
-        "All lines should respect wrap width"
-    )
+    assert all(
+        len(line) < max_line_length for line in file_lines
+    ), "All lines should respect wrap width"
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1310,9 +1310,9 @@ def test_cli_word_wrapping_not_executed_with_no_markdown_and_replace(
     # Read the file and verify it was NOT wrapped
     file_content = test_file.read_text()
     # The long line should be preserved as-is
-    assert long_line in file_content, (
-        "Long line should not be wrapped with --no-markdown"
-    )
+    assert (
+        long_line in file_content
+    ), "Long line should not be wrapped with --no-markdown"
 
 
 @patch("copyedit_ai.__main__.copyedit")
