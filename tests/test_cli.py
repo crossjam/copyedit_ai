@@ -1160,7 +1160,6 @@ def test_cli_word_wrapping_executed_in_streaming_mode(
     # Even in streaming mode, the final output should be wrapped
     # Note: In streaming mode, chunks are output as they arrive,
     # but mdformat is still applied to the collected text
-    assert result.exit_code == 0
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1306,7 +1305,6 @@ def test_cli_word_wrapping_with_multiple_paragraphs(
     assert result.exit_code == 0
 
     # The output should preserve paragraph breaks while wrapping lines
-    assert result.exit_code == 0
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -1333,7 +1331,6 @@ def test_cli_word_wrapping_combination_stream_and_custom_width(
         cli, ["edit", "--stream", "--wrap-width", "40", str(test_file)]
     )
 
-    assert result.exit_code == 0
     # Just verify the command executes successfully
     assert result.exit_code == 0
 
@@ -1362,7 +1359,6 @@ def test_cli_word_wrapping_combination_no_stream_and_custom_width(
         cli, ["edit", "--no-stream", "--wrap-width", "80", str(test_file)]
     )
 
-    assert result.exit_code == 0
     # Just verify the command executes successfully
     assert result.exit_code == 0
 
@@ -1378,6 +1374,7 @@ def test_cli_word_wrapping_validation_warning(
     test_file.write_text("Test text.")
 
     # Create multiple very long lines that exceed the wrap width
+    # Using .join() is clearer than f-strings for multi-line text
     long_lines = "\n".join([  # noqa: FLY002
         (
             "This is a very long line number one that definitely exceeds the "
