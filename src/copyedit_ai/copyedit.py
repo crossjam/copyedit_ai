@@ -35,7 +35,7 @@ Leave front matter between the following bracket sets unmodified
 YAML
 ---
 ---
-    
+
 TOML
 +++
 +++
