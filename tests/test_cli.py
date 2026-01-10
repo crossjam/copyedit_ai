@@ -1526,6 +1526,39 @@ Is this thing on?
 
 
 @patch("copyedit_ai.__main__.copyedit")
+def test_cli_preserves_yaml_frontmatter_from_test_file(
+    mock_copyedit, tmp_path: Path
+) -> None:
+    """Test that YAML frontmatter is preserved using the actual test_doc.md file."""
+    # Read the actual test document
+    test_doc_path = Path(__file__).parent / "test_doc.md"
+    test_content = test_doc_path.read_text()
+
+    # Create a copy in tmp_path for the test
+    test_file = tmp_path / "test_doc.md"
+    test_file.write_text(test_content)
+
+    # Mock the copyedit response to return the same content
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([test_content]))
+    mock_copyedit.return_value = mock_response
+
+    # Run copyedit on the file
+    result = runner.invoke(cli, ["edit", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify the frontmatter is in the output
+    output = result.output
+    assert "---" in output
+    assert "Testing, Testing!" in output
+    assert "2026-05-26" in output
+    assert "J. Random User" in output
+    assert "Microphone check" in output
+
+
+@patch("copyedit_ai.__main__.copyedit")
 def test_cli_preserves_yaml_frontmatter_in_replace_mode(
     mock_copyedit, tmp_path: Path
 ) -> None:
@@ -1574,6 +1607,50 @@ Is this thing on?
     assert "Testing, Testing!" in replaced_content
     assert "date: 2026-05-26" in replaced_content
     # Check for author value (mdformat may remove quotes)
+    assert "author:" in replaced_content
+    assert "J. Random User" in replaced_content
+    assert "Microphone check" in replaced_content
+
+    # Verify backup was created with original frontmatter
+    backup_path = tmp_path / "test_doc.md.bak"
+    assert backup_path.exists()
+    backup_content = backup_path.read_text()
+    assert "---" in backup_content
+    assert "Testing, Testing!" in backup_content
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_preserves_yaml_frontmatter_from_test_file_replace_mode(
+    mock_copyedit, tmp_path: Path
+) -> None:
+    """Test YAML frontmatter preservation in replace mode using test_doc.md file."""
+    # Read the actual test document
+    test_doc_path = Path(__file__).parent / "test_doc.md"
+    original_content = test_doc_path.read_text()
+
+    # Create a copy in tmp_path for the test
+    test_file = tmp_path / "test_doc.md"
+    test_file.write_text(original_content)
+
+    # Mock the copyedit response to return the same content
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([original_content]))
+    mock_copyedit.return_value = mock_response
+
+    # Run copyedit with --replace and confirm
+    result = runner.invoke(cli, ["edit", "--replace", str(test_file)], input="y\n")
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Read the replaced file and verify frontmatter is preserved
+    # Note: mdformat may normalize YAML (e.g., removing unnecessary quotes)
+    replaced_content = test_file.read_text()
+    assert "---" in replaced_content
+    assert "title:" in replaced_content
+    assert "Testing, Testing!" in replaced_content
+    assert "date:" in replaced_content
+    assert "2026-05-26" in replaced_content
     assert "author:" in replaced_content
     assert "J. Random User" in replaced_content
     assert "Microphone check" in replaced_content
