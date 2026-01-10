@@ -773,8 +773,12 @@ def test_cli_wrap_width_default(mock_copyedit, mock_mdformat, tmp_path: Path) ->
     assert result.exit_code == 0
     mock_copyedit.assert_called_once()
 
-    # Verify mdformat.text was called with default wrap width of 90
-    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 80})
+    # Verify mdformat.text was called with default wrap width of 80
+    mock_mdformat.assert_called_once_with(
+        "Corrected text",
+        options={"wrap": 80},
+        extensions={"front_matters", "footnote"},
+    )
 
 
 @patch("copyedit_ai.__main__.mdformat.text")
@@ -799,7 +803,11 @@ def test_cli_wrap_width_custom(mock_copyedit, mock_mdformat, tmp_path: Path) -> 
     mock_copyedit.assert_called_once()
 
     # Verify mdformat.text was called with custom wrap width of 120
-    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 120})
+    mock_mdformat.assert_called_once_with(
+        "Corrected text",
+        options={"wrap": 120},
+        extensions={"front_matters", "footnote"},
+    )
 
 
 @patch("copyedit_ai.__main__.mdformat.text")
@@ -826,7 +834,11 @@ def test_cli_wrap_width_short_option(
     mock_copyedit.assert_called_once()
 
     # Verify mdformat.text was called with wrap width of 72
-    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 72})
+    mock_mdformat.assert_called_once_with(
+        "Corrected text",
+        options={"wrap": 72},
+        extensions={"front_matters", "footnote"},
+    )
 
 
 @patch("copyedit_ai.__main__.mdformat.text")
@@ -856,7 +868,9 @@ def test_cli_wrap_width_with_no_stream(
 
     # Verify mdformat.text was called with wrap width of 100
     mock_mdformat.assert_called_once_with(
-        "Corrected text without streaming", options={"wrap": 100}
+        "Corrected text without streaming",
+        options={"wrap": 100},
+        extensions={"front_matters", "footnote"},
     )
 
 
@@ -887,7 +901,11 @@ def test_cli_wrap_width_with_replace(
     mock_copyedit.assert_called_once()
 
     # Verify mdformat.text was called with wrap width of 80
-    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 80})
+    mock_mdformat.assert_called_once_with(
+        "Corrected text",
+        options={"wrap": 80},
+        extensions={"front_matters", "footnote"},
+    )
 
     # Verify the file was replaced with the formatted text
     assert test_file.read_text() == "Corrected text"
@@ -1032,7 +1050,11 @@ def test_cli_markdown_with_wrap_width(
     mock_copyedit.assert_called_once()
 
     # Verify mdformat.text was called with the correct wrap width
-    mock_mdformat.assert_called_once_with("Corrected text", options={"wrap": 100})
+    mock_mdformat.assert_called_once_with(
+        "Corrected text",
+        options={"wrap": 100},
+        extensions={"front_matters", "footnote"},
+    )
 
 
 @patch("copyedit_ai.__main__.mdformat.text")
@@ -1453,3 +1475,332 @@ def test_cli_word_wrapping_validation_warning(
     assert result.exit_code == 0
     # Check that a warning about wrapping was emitted
     assert "Warning" in result.output or "wrap" in result.output.lower()
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_preserves_yaml_frontmatter(mock_copyedit, tmp_path: Path) -> None:
+    """Test that YAML frontmatter is preserved when _perform_copyedit is run."""
+    # Create the test document with YAML frontmatter
+    test_file = tmp_path / "test_doc.md"
+    frontmatter_content = """---
+title: "Testing, Testing!"
+date: 2026-05-26
+author: "J. Random User"
+---
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    test_file.write_text(frontmatter_content)
+
+    # Mock the copyedit response to return text with frontmatter
+    # (simulating that the LLM preserved it or we're testing the mdformat step)
+    copyedited_text = """---
+title: "Testing, Testing!"
+date: 2026-05-26
+author: "J. Random User"
+---
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([copyedited_text]))
+    mock_copyedit.return_value = mock_response
+
+    # Run copyedit on the file
+    result = runner.invoke(cli, ["edit", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify the frontmatter is in the output
+    output = result.output
+    assert "---" in output
+    assert 'title: "Testing, Testing!"' in output
+    assert "date: 2026-05-26" in output
+    assert 'author: "J. Random User"' in output
+    assert "Microphone check" in output
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_preserves_yaml_frontmatter_in_replace_mode(
+    mock_copyedit, tmp_path: Path
+) -> None:
+    """Test that YAML frontmatter is preserved when replacing a file."""
+    # Create the test document with YAML frontmatter
+    test_file = tmp_path / "test_doc.md"
+    original_content = """---
+title: "Testing, Testing!"
+date: 2026-05-26
+author: "J. Random User"
+---
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    test_file.write_text(original_content)
+
+    # Mock the copyedit response to return edited text with frontmatter
+    copyedited_text = """---
+title: "Testing, Testing!"
+date: 2026-05-26
+author: "J. Random User"
+---
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([copyedited_text]))
+    mock_copyedit.return_value = mock_response
+
+    # Run copyedit with --replace and confirm
+    result = runner.invoke(cli, ["edit", "--replace", str(test_file)], input="y\n")
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Read the replaced file and verify frontmatter is preserved
+    # Note: mdformat may normalize YAML (e.g., removing unnecessary quotes)
+    replaced_content = test_file.read_text()
+    assert "---" in replaced_content
+    # Check for title value (mdformat may remove quotes from simple strings)
+    assert "title:" in replaced_content
+    assert "Testing, Testing!" in replaced_content
+    assert "date: 2026-05-26" in replaced_content
+    # Check for author value (mdformat may remove quotes)
+    assert "author:" in replaced_content
+    assert "J. Random User" in replaced_content
+    assert "Microphone check" in replaced_content
+
+    # Verify backup was created with original frontmatter
+    backup_path = tmp_path / "test_doc.md.bak"
+    assert backup_path.exists()
+    backup_content = backup_path.read_text()
+    assert "---" in backup_content
+    assert "Testing, Testing!" in backup_content
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_preserves_toml_frontmatter(mock_copyedit, tmp_path: Path) -> None:
+    """Test that TOML frontmatter is preserved when _perform_copyedit is run."""
+    # Create the test document with TOML frontmatter
+    test_file = tmp_path / "test_doc.md"
+    frontmatter_content = """+++
+title = "Testing, Testing!"
+date = 2026-05-26
+author = "J. Random User"
++++
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    test_file.write_text(frontmatter_content)
+
+    # Mock the copyedit response to return text with frontmatter
+    copyedited_text = """+++
+title = "Testing, Testing!"
+date = 2026-05-26
+author = "J. Random User"
++++
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([copyedited_text]))
+    mock_copyedit.return_value = mock_response
+
+    # Run copyedit on the file
+    result = runner.invoke(cli, ["edit", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify the frontmatter is in the output
+    output = result.output
+    assert "+++" in output
+    assert "title" in output
+    assert "Testing, Testing!" in output
+    assert "date" in output
+    assert "2026-05-26" in output
+    assert "author" in output
+    assert "J. Random User" in output
+    assert "Microphone check" in output
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_preserves_toml_frontmatter_in_replace_mode(
+    mock_copyedit, tmp_path: Path
+) -> None:
+    """Test that TOML frontmatter is preserved when replacing a file."""
+    # Create the test document with TOML frontmatter
+    test_file = tmp_path / "test_doc.md"
+    original_content = """+++
+title = "Testing, Testing!"
+date = 2026-05-26
+author = "J. Random User"
++++
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    test_file.write_text(original_content)
+
+    # Mock the copyedit response to return edited text with frontmatter
+    copyedited_text = """+++
+title = "Testing, Testing!"
+date = 2026-05-26
+author = "J. Random User"
++++
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([copyedited_text]))
+    mock_copyedit.return_value = mock_response
+
+    # Run copyedit with --replace and confirm
+    result = runner.invoke(cli, ["edit", "--replace", str(test_file)], input="y\n")
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Read the replaced file and verify frontmatter is preserved
+    replaced_content = test_file.read_text()
+    assert "+++" in replaced_content
+    assert "title" in replaced_content
+    assert "Testing, Testing!" in replaced_content
+    assert "date" in replaced_content
+    assert "2026-05-26" in replaced_content
+    assert "author" in replaced_content
+    assert "J. Random User" in replaced_content
+    assert "Microphone check" in replaced_content
+
+    # Verify backup was created with original frontmatter
+    backup_path = tmp_path / "test_doc.md.bak"
+    assert backup_path.exists()
+    backup_content = backup_path.read_text()
+    assert "+++" in backup_content
+    assert "Testing, Testing!" in backup_content
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_preserves_json_frontmatter(mock_copyedit, tmp_path: Path) -> None:
+    """Test that JSON frontmatter is preserved when _perform_copyedit is run."""
+    # Create the test document with JSON frontmatter
+    test_file = tmp_path / "test_doc.md"
+    frontmatter_content = """{
+  "title": "Testing, Testing!",
+  "date": "2026-05-26",
+  "author": "J. Random User"
+}
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    test_file.write_text(frontmatter_content)
+
+    # Mock the copyedit response to return text with frontmatter
+    copyedited_text = """{
+  "title": "Testing, Testing!",
+  "date": "2026-05-26",
+  "author": "J. Random User"
+}
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([copyedited_text]))
+    mock_copyedit.return_value = mock_response
+
+    # Run copyedit on the file
+    result = runner.invoke(cli, ["edit", str(test_file)])
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Verify the frontmatter is in the output
+    output = result.output
+    assert "{" in output
+    assert "}" in output
+    assert '"title"' in output
+    assert "Testing, Testing!" in output
+    assert '"date"' in output
+    assert "2026-05-26" in output
+    assert '"author"' in output
+    assert "J. Random User" in output
+    assert "Microphone check" in output
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_preserves_json_frontmatter_in_replace_mode(
+    mock_copyedit, tmp_path: Path
+) -> None:
+    """Test that JSON frontmatter is preserved when replacing a file."""
+    # Create the test document with JSON frontmatter
+    test_file = tmp_path / "test_doc.md"
+    original_content = """{
+  "title": "Testing, Testing!",
+  "date": "2026-05-26",
+  "author": "J. Random User"
+}
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    test_file.write_text(original_content)
+
+    # Mock the copyedit response to return edited text with frontmatter
+    copyedited_text = """{
+  "title": "Testing, Testing!",
+  "date": "2026-05-26",
+  "author": "J. Random User"
+}
+
+Microphone check. One, two! One, two!
+
+Is this thing on?
+"""
+    mock_response = MagicMock()
+    mock_response.__iter__ = MagicMock(return_value=iter([copyedited_text]))
+    mock_copyedit.return_value = mock_response
+
+    # Run copyedit with --replace and confirm
+    result = runner.invoke(cli, ["edit", "--replace", str(test_file)], input="y\n")
+
+    assert result.exit_code == 0
+    mock_copyedit.assert_called_once()
+
+    # Read the replaced file and verify frontmatter is preserved
+    replaced_content = test_file.read_text()
+    assert "{" in replaced_content
+    assert "}" in replaced_content
+    assert '"title"' in replaced_content
+    assert "Testing, Testing!" in replaced_content
+    assert '"date"' in replaced_content
+    assert "2026-05-26" in replaced_content
+    assert '"author"' in replaced_content
+    assert "J. Random User" in replaced_content
+    assert "Microphone check" in replaced_content
+
+    # Verify backup was created with original frontmatter
+    backup_path = tmp_path / "test_doc.md.bak"
+    assert backup_path.exists()
+    backup_content = backup_path.read_text()
+    assert "{" in backup_content
+    assert "Testing, Testing!" in backup_content

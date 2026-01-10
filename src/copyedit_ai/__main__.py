@@ -252,7 +252,11 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
             output_text = "".join(chunks)
             if markdown:
-                output_text = mdformat.text(output_text, options={"wrap": wrap_width})
+                output_text = mdformat.text(
+                    output_text,
+                    options={"wrap": wrap_width},
+                    extensions={"front_matters", "footnote"},
+                )
                 # Check if wrapping was properly applied
                 _check_word_wrapping_applied(output_text, wrap_width, markdown)
             if not replace:
@@ -266,7 +270,11 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
             assert isinstance(response, llm.Response)  # noqa: S101
             output_text = response.text()
             if markdown:
-                output_text = mdformat.text(output_text, options={"wrap": wrap_width})
+                output_text = mdformat.text(
+                    output_text,
+                    options={"wrap": wrap_width},
+                    extensions={"front_matters", "footnote"},
+                )
                 # Check if wrapping was properly applied
                 _check_word_wrapping_applied(output_text, wrap_width, markdown)
             # Stop spinner after API call completes
