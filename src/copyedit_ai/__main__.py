@@ -3,11 +3,12 @@
 Copyedit text from the CLI using AI
 """
 
+import json
 import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import llm
 import typer
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     import click
 
 from .copyedit import copyedit
+from .schemas import get_copyedit_schema
 from .self_subcommand import cli as self_cli
 from .settings import Settings
 
@@ -65,12 +67,46 @@ app.add_typer(
 )
 
 
-def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
+class StructuredOutputError(ValueError):
+    """Raised when a model does not return the requested JSON structure."""
+
+
+def _get_structured_output(response: llm.Response) -> tuple[dict[str, Any], str]:
+    """Return and validate the structured model response."""
+    output_data = response.json()
+    if output_data is None:
+        try:
+            output_data = json.loads(response.text())
+        except json.JSONDecodeError as error:
+            message = "The model returned invalid JSON structured output"
+            raise StructuredOutputError(message) from error
+
+    if not isinstance(output_data, dict):
+        message = "The model returned a JSON value that is not an object"
+        raise StructuredOutputError(message)
+
+    output_text = output_data.get("copyedited_text")
+    if not isinstance(output_text, str):
+        message = "The model response is missing a string 'copyedited_text' field"
+        raise StructuredOutputError(message)
+
+    changes = output_data.get("changes")
+    if not isinstance(changes, list) or not all(
+        isinstance(change, str) for change in changes
+    ):
+        message = "The model response is missing a string list 'changes' field"
+        raise StructuredOutputError(message)
+
+    return output_data, output_text
+
+
+def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
     settings: Settings,
     file_path: Path | None,
     model: str | None,
     stream: bool,
     replace: bool,
+    json_output: bool,
 ) -> None:
     """Perform copyediting operation.
 
@@ -118,11 +154,22 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0915
         )
         status.start()
 
-        response = copyedit(text, model_name=model_name, stream=stream)
+        response = copyedit(
+            text,
+            model_name=model_name,
+            stream=stream and not json_output,
+            schema=get_copyedit_schema() if json_output else None,
+        )
 
         # Collect the output
         output_text = ""
-        if stream:
+        if json_output:
+            assert isinstance(response, llm.Response)  # noqa: S101
+            output_data, output_text = _get_structured_output(response)
+            status.stop()
+            if not replace:
+                typer.echo(json.dumps(output_data, ensure_ascii=False, indent=2))
+        elif stream:
             # Stream output and collect it
             chunks = []
             first_chunk = True
@@ -252,7 +299,7 @@ def main_callback(
 
 
 @app.command(name="edit")
-def edit_command(
+def edit_command(  # noqa: PLR0913
     ctx: typer.Context,
     file_path: Path | None = typer.Argument(
         None,
@@ -277,6 +324,11 @@ def edit_command(
         "-r",
         help="Replace the original file after confirmation. Creates a .bak backup.",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output the copyedited text and changes as structured JSON.",
+    ),
 ) -> None:
     """Copyedit text using AI.
 
@@ -288,10 +340,11 @@ def edit_command(
         copyedit_ai draft.txt
         cat draft.txt | copyedit_ai -m claude-opus
         copyedit_ai draft.txt --replace
+        copyedit_ai draft.txt --json
 
     """
     settings: Settings = ctx.obj
-    _perform_copyedit(settings, file_path, model, stream, replace)
+    _perform_copyedit(settings, file_path, model, stream, replace, json_output)
 
 
 def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:

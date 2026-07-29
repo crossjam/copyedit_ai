@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "copyedit_ai copyediting result",
+  "description": "The corrected document and a summary of the changes made to it.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "copyedited_text": {
+      "type": "string",
+      "description": "The complete copyedited document."
+    },
+    "changes": {
+      "type": "array",
+      "description": "A concise list of corrections and other changes made.",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "copyedited_text",
+    "changes"
+  ]
+}

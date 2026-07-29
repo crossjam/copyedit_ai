@@ -34,6 +34,27 @@ Display the version:
 copyedit_ai --version
 ```
 
+### Structured JSON output
+
+Use `--json` to ask the model for a structured response containing the complete
+copyedited document and a list of changes:
+
+```bash
+copyedit_ai edit draft.txt --json
+```
+
+The JSON object has this shape:
+
+```json
+{
+  "copyedited_text": "The corrected document.",
+  "changes": ["Fixed spelling and punctuation."]
+}
+```
+
+Structured output is collected before it is printed, so `--json` disables
+streaming for that invocation.
+
 ## Self-Subcommands
 
 Copyedit with AI uses a self-subcommand pattern, where the main command can also act as a subcommand. This provides a clean and intuitive interface.

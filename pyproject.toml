@@ -48,6 +48,7 @@ dev = [
     "ruff",
     "ty",
     "toml-cli",
+    "pip-audit>=2.10.1",
 ]
 docs = [
     "mkdocs",
