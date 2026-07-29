@@ -6,7 +6,7 @@ readme = "README.md"
 license = "Apache-2.0"
 authors = [{name = "crossjam", email = "bmd@pirateninja.dev"}]
 repository = "https://github.com/crossjam/copyedit_ai"
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.13,<4.0"
 dependencies = [
     "llm",
     "loguru",
