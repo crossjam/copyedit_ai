@@ -196,3 +196,4 @@ cython_debug/
 # MacOS 
 .DS_Store/
 /.claude/
+.kata.local.toml
