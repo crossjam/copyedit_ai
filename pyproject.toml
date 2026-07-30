@@ -51,7 +51,7 @@ dev = [
     "poethepoet",
     "pytest",
     "pytest-cov",
-    "ruff>=0.14.6,<0.15",
+    "ruff>=0.16.0,<0.17",
     "ty",
     "toml-cli",
     "pip-audit>=2.10.1",
