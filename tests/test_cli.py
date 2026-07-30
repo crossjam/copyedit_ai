@@ -21,6 +21,18 @@ def test_cli_help() -> None:
     assert result.exit_code == 0
 
 
+@patch("copyedit_ai.__main__.llm.get_models_with_aliases")
+def test_model_display_name_uses_shortest_alias(mock_get_models) -> None:
+    """Choose the shortest alias when llm returns aliases as a set."""
+    model_with_alias = MagicMock()
+    model_with_alias.matches.return_value = True
+    model_with_alias.aliases = {"long-model-name", "short"}
+    model_with_alias.model.model_id = "model-id"
+    mock_get_models.return_value = [model_with_alias]
+
+    assert main_module._get_model_display_name("model-id") == "short"  # noqa: SLF001
+
+
 def test_cli_entry_points_exist() -> None:
     """Test that both copyedit and copyedit_ai entry points are defined."""
     import tomllib  # noqa: PLC0415

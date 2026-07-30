@@ -48,7 +48,9 @@ def _get_model_display_name(model_name: str) -> str:
                 # Return first alias if available
                 # (aliases are usually sorted shortest first)
                 if model_with_alias.aliases:
-                    return model_with_alias.aliases[0]
+                    return min(
+                        model_with_alias.aliases, key=lambda alias: (len(alias), alias)
+                    )
                 # Fall back to model_id
                 return model_with_alias.model.model_id
     except Exception:  # noqa: S110
