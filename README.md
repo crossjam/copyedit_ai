@@ -16,66 +16,62 @@
 
 ### LLM Configuration Management
 
-Manage your isolated LLM configuration directly through copyedit_ai:
+Manage your isolated LLM configuration directly through copyedit:
 
-- `copyedit_ai self install` - Install LLM plugins from PyPI
-- `copyedit_ai self uninstall` - Uninstall LLM plugins
-- `copyedit_ai self plugins` - List and manage installed plugins
-- `copyedit_ai self keys` - Manage API keys for different model providers
-- `copyedit_ai self templates` - Manage prompt templates
-- `copyedit_ai self models` - List and configure available models
-- `copyedit_ai self aliases` - Create shortcuts for frequently used models
-- `copyedit_ai self schemas` - Manage stored schemas
+- `copyedit self install` - Install LLM plugins from PyPI
+- `copyedit self uninstall` - Uninstall LLM plugins
+- `copyedit self plugins` - List and manage installed plugins
+- `copyedit self keys` - Manage API keys for different model providers
+- `copyedit self templates` - Manage prompt templates
+- `copyedit self models` - List and configure available models
+- `copyedit self aliases` - Create shortcuts for frequently used models
+- `copyedit self schemas` - Manage stored schemas
 
-All commands operate within copyedit_ai's isolated configuration directory, preventing conflicts with system-wide llm installations.
+All commands operate within copyedit's isolated configuration directory, preventing conflicts with system-wide llm installations.
 
 #### Example: Adding Claude Support
 
 ```bash
 # Install Anthropic plugin
-copyedit_ai self install llm-anthropic
+copyedit self install llm-anthropic
 
 # Set up API key
-copyedit_ai self keys set anthropic
+copyedit self keys set anthropic
 # Enter your API key when prompted
 
 # Create an alias for convenience
-copyedit_ai self aliases set sonnet claude-sonnet-4.5
+copyedit self aliases set sonnet claude-sonnet-4.5
 
 # Use Claude to copyedit
-copyedit_ai --model sonnet article.txt
+copyedit --model sonnet article.txt
 ```
 
 #### Example: Using Local Models with Ollama
 
 ```bash
 # Install Ollama plugin
-copyedit_ai self install llm-ollama
+copyedit self install llm-ollama
 
 # List available Ollama models
-copyedit_ai self models list
+copyedit self models list
 
 # Use a local model
-copyedit_ai --model llama3.2 draft.txt
+copyedit --model llama3.2 draft.txt
 ``` 
 
 ## Installation
 
-### pip
-
-```console
-python3 -m pip install copyedit_ai
-```
+TBD: publishing a package to PyPI. 
 
 ### uvx
 ```console
-uvx --from copyedit_ai copyedit_ai
+uvx --from git+https://github.com/crossjam/copyedit_ai copyedit --help
 ```
 
 ### uv
 
 ```console
-uvx pip install copyedit_ai
+uv tool install git+https://github.com/crossjam/copyedit_ai
 ```
 
 ## Usage
@@ -88,23 +84,20 @@ copyedit --help
 copyedit_ai --help
 ```
 
+The author prefers `copyedit`
 
 ## Development
 
 This project and it's virtual environment is managed using [uv][uv] and
 is configured to support automatic activation of virtual environments
 using [direnv][direnv]. Development activites such as linting and testing
-are automated via [Poe The Poet][poethepoet], run `poe` after cloning
+are automated via [Poe The Poet][poe], run `poe` after cloning
 this repo.
 
 ### Clone
 ```console
 git clone https://github.com/crossjam/copyedit_ai
 cd copyedit_ai
-```
-### Allow Direnv _optional_ but recommended
-```console
-direnv allow
 ```
 
 ### Create a Virtual Environment

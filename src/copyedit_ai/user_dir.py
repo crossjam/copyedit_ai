@@ -8,6 +8,7 @@ with system-wide llm installations.
 import os
 from pathlib import Path
 
+import platformdirs
 from loguru import logger
 
 # Application identifier using reverse domain notation
@@ -34,7 +35,10 @@ def get_app_config_dir() -> Path:
         Path to application config directory
 
     """
-    return get_xdg_config_home() / APP_IDENTIFIER
+    if os.environ.get("XDG_CONFIG_HOME"):
+        return get_xdg_config_home() / APP_IDENTIFIER
+
+    return Path(platformdirs.user_data_dir(APP_IDENTIFIER, "copyedit_ai"))
 
 
 def get_llm_config_dir() -> Path:

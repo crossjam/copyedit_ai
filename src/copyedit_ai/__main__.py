@@ -4,29 +4,36 @@ Copyedit text from the CLI using AI
 """
 
 import json
+import os
 import shutil
 import sys
 import tempfile
+from importlib.metadata import version as get_version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+import click
 import llm
+import mdformat
 import typer
 import typer.main
 from click_default_group import DefaultGroup
-from loguru import logger
 from rich.console import Console
 from rich.status import Status
 
-if TYPE_CHECKING:
-    import click
+from .logging_config import get_logger, setup_logging
 
-from .copyedit import copyedit
+if TYPE_CHECKING:
+    from click import Context, Parameter
+
+from .copyedit import copyedit, templates_installed
 from .schemas import get_copyedit_schema
 from .self_subcommand import cli as self_cli
 from .settings import Settings
+from .user_dir import get_app_config_dir
 
 console = Console(stderr=True)
+logger = get_logger("copyedit")
 
 app = typer.Typer()
 
@@ -102,6 +109,84 @@ def _get_structured_output(response: llm.Response) -> tuple[dict[str, Any], str]
     return output_data, output_text
 
 
+def _get_package_version() -> str:
+    """Get the package version.
+
+    Returns:
+        The package version string.
+
+    Raises:
+        RuntimeError: If the version cannot be retrieved.
+
+    """
+    try:
+        return get_version("copyedit_ai")
+    except Exception as error:
+        logger.exception("Failed to retrieve package version:")
+        msg = "Error: Failed to retrieve version"
+        raise RuntimeError(msg) from error
+
+
+@app.command(name="version")
+def version_command() -> None:
+    """Display the version of copyedit_ai."""
+    try:
+        pkg_version = _get_package_version()
+        typer.echo(f"copyedit-ai: {pkg_version}")
+    except RuntimeError:
+        typer.echo("Error: Failed to retrieve version", err=True)
+        raise typer.Exit(code=1) from None
+
+
+def _check_word_wrapping_applied(
+    text: str, wrap_width: int, markdown_enabled: bool
+) -> None:
+    """Check if word wrapping was properly applied to the text.
+
+    Emits a warning if markdown formatting is enabled but the text
+    doesn't appear to be properly wrapped.
+
+    Args:
+        text: The formatted text to check
+        wrap_width: The expected wrap width
+        markdown_enabled: Whether markdown formatting was enabled
+
+    """
+    if not markdown_enabled:
+        # No wrapping expected
+        return
+
+    # Check if any lines significantly exceed the wrap width
+    # Allow some tolerance for edge cases (e.g., long URLs, code blocks)
+    tolerance = 20  # Allow lines up to wrap_width + 20
+    max_allowed_length = wrap_width + tolerance
+
+    lines = text.split("\n")
+    long_lines = [line for line in lines if len(line) > max_allowed_length]
+
+    if long_lines:
+        # Count how many lines are too long
+        long_line_count = len(long_lines)
+        total_lines = len([line for line in lines if line.strip()])
+
+        # If more than 10% of lines are too long, emit a warning
+        threshold_percentage = 0.1
+        if total_lines > 0 and (long_line_count / total_lines) > threshold_percentage:
+            logger.warning(
+                "Word wrapping may not have been applied correctly. "
+                "Found {long_line_count} lines exceeding {} "
+                "characters (wrap width: {}, tolerance: {})",
+                max_allowed_length,
+                wrap_width,
+                tolerance,
+            )
+            # Rich Console (configured with stderr=True) prints to stderr by default
+            console.print(
+                f"[yellow]Warning:[/yellow] Some lines exceed the wrap width of "
+                f"{wrap_width} characters. The content may not be properly wrapped."
+            )
+
+
 def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
     settings: Settings,
     file_path: Path | None,
@@ -109,18 +194,28 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
     stream: bool,
     replace: bool,
     json_output: bool,
+    wrap_width: int,
+    markdown: bool,
 ) -> None:
     """Perform copyediting operation.
 
     Helper function to handle the actual copyediting logic.
     """
+    if replace and not file_path:
+        logger.error("Cannot use --replace with stdin input")
+        typer.echo(
+            "Error: --replace requires a file argument, not stdin",
+            err=True,
+        )
+        raise typer.Exit(1)
+
     # Use default model from settings if not provided
     model_name = model or settings.default_model
 
     # Read input text
     source_name = str(file_path) if file_path else "stdin"
     if file_path:
-        logger.info(f"Reading from file: {file_path}")
+        logger.info("Reading from file: {}", file_path)
         text = file_path.read_text()
     else:
         logger.info("Reading from stdin")
@@ -172,6 +267,24 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
             if not replace:
                 typer.echo(json.dumps(output_data, ensure_ascii=False, indent=2))
         elif stream:
+            if markdown:
+                logger.warning(
+                    "Streaming output response does not "
+                    "incorporate word wrapping to the console."
+                )
+                click.secho(
+                    "Streaming output response does not "
+                    "incorporate word wrapping to the console.",
+                    fg="yellow",
+                )
+                logger.warning(
+                    "LLM response text may present lines long then wrap width."
+                )
+                click.secho(
+                    "LLM response text may present lines long then wrap width.",
+                    fg="yellow",
+                )
+
             # Stream output and collect it
             chunks = []
             first_chunk = True
@@ -187,6 +300,14 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     typer.echo(chunk, nl=False)
 
             output_text = "".join(chunks)
+            if markdown:
+                output_text = mdformat.text(
+                    output_text,
+                    options={"wrap": wrap_width},
+                    extensions={"front_matters", "footnote"},
+                )
+                # Check if wrapping was properly applied
+                _check_word_wrapping_applied(output_text, wrap_width, markdown)
             if not replace:
                 typer.echo()  # Final newline
             else:
@@ -197,6 +318,14 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
             # Type assertion: in non-streaming mode, response is always Response
             assert isinstance(response, llm.Response)  # noqa: S101
             output_text = response.text()
+            if markdown:
+                output_text = mdformat.text(
+                    output_text,
+                    options={"wrap": wrap_width},
+                    extensions={"front_matters", "footnote"},
+                )
+                # Check if wrapping was properly applied
+                _check_word_wrapping_applied(output_text, wrap_width, markdown)
             # Stop spinner after API call completes
             status.stop()
             if not replace:
@@ -204,21 +333,13 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
         # Handle replace mode
         if replace:
-            if not file_path:
-                logger.error("Cannot use --replace with stdin input")
-                typer.echo(
-                    "Error: --replace requires a file argument, not stdin",
-                    err=True,
-                )
-                raise typer.Exit(1)  # noqa: TRY301
-
+            assert file_path is not None  # Validated at function start  # noqa: S101
             # Write to secure temporary file
             temp_fd, temp_path_str = tempfile.mkstemp(
                 suffix=file_path.suffix,
                 prefix=f"{file_path.stem}_copyedit_",
                 text=True,
             )
-            import os  # noqa: PLC0415
 
             os.close(temp_fd)  # Close fd, we'll use Path.open() instead
             temp_path = Path(temp_path_str)
@@ -226,7 +347,7 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 with temp_path.open("w") as temp_file:
                     temp_file.write(output_text)
 
-                logger.info(f"Wrote copyedited content to temporary file: {temp_path}")
+                logger.info("Wrote copyedited content to temporary file: {}", temp_path)
 
                 # Prompt user for confirmation
                 typer.echo(f"\nCopyedited content written to: {temp_path}")
@@ -240,11 +361,11 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     # Create backup of original file
                     backup_path = file_path.with_suffix(file_path.suffix + ".bak")
                     shutil.copy2(file_path, backup_path)
-                    logger.info(f"Created backup: {backup_path}")
+                    logger.info("Created backup: {}", backup_path)
 
                     # Replace original with temp file
                     shutil.copy2(temp_path, file_path)
-                    logger.info(f"Replaced {file_path} with copyedited version")
+                    logger.info("Replaced {} with copyedited version", file_path)
 
                     typer.secho(
                         f"✓ File replaced successfully. Backup saved to: {backup_path}",
@@ -285,17 +406,22 @@ def main_callback(
     """Copyedit text from the CLI using AI"""
     ctx.obj = Settings()
     debug = debug or ctx.obj.debug
-
-    # Only add file logging if explicitly requested
     log_path = log_file or ctx.obj.log_file
+
+    setup_logging(
+        get_app_config_dir(),
+        verbose=debug,
+        log_file=log_path,
+        enable_file_logging=None if log_path else False,
+    )
 
     # Enable logging if debug mode or file logging is requested
     if debug or log_path:
         logger.enable("copyedit_ai")
         if log_path:
-            logger.add(str(log_path))
-            logger.info(f"Logging to file: {log_path}")
-        logger.info(f"{debug=}")
+            logger.info("Logging to file: {}", log_path)
+        msg = f"{debug=}"
+        logger.info(msg)
     else:
         logger.disable("copyedit_ai")
 
@@ -331,6 +457,18 @@ def edit_command(  # noqa: PLR0913
         "--json",
         help="Output the copyedited text and changes as structured JSON.",
     ),
+    wrap_width: int = typer.Option(
+        80,
+        "--wrap-width",
+        "-w",
+        min=1,
+        help="Set width for mdformat word wrapping",
+    ),
+    markdown: bool = typer.Option(
+        True,
+        "--markdown/--no-markdown",
+        help="Enable/disable Markdown formatting and word wrapping of output",
+    ),
 ) -> None:
     """Copyedit text using AI.
 
@@ -346,13 +484,22 @@ def edit_command(  # noqa: PLR0913
 
     """
     settings: Settings = ctx.obj
-    _perform_copyedit(settings, file_path, model, stream, replace, json_output)
+    _perform_copyedit(
+        settings,
+        file_path,
+        model,
+        stream,
+        replace,
+        json_output,
+        wrap_width,
+        markdown,
+    )
 
 
 def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
     """Attach llm's command groups to the 'self' subcommand.
 
-    This allows users to access llm's native commands within copyedit_ai's
+    This allows users to access llm's native commands within copyedit's
     isolated configuration context.
 
     Args:
@@ -390,19 +537,26 @@ def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
     for cmd_name in passthrough_commands:
         # Don't override existing commands
         if cmd_name in self_command.commands:
-            logger.debug(f"Skipping llm command {cmd_name} - already exists")
+            logger.debug("Skipping llm command {} - already exists", cmd_name)
             continue
 
         llm_command = llm_cli.commands.get(cmd_name)
         if llm_command:
             self_command.add_command(llm_command, name=cmd_name)
-            logger.debug(f"Attached llm command: {cmd_name}")
+            logger.debug("Attached llm command: {}", cmd_name)
         else:
-            logger.warning(f"Could not find llm command: {cmd_name}")
+            logger.warning("Could not find llm command: {}", cmd_name)
 
 
-def cli() -> None:
-    """CLI entry point with default command support."""
+def setup_click_group() -> "DefaultGroup":
+    """Set up the Click group with DefaultGroup and version option.
+
+    This function is used by both the CLI entry point and tests.
+
+    Returns:
+        The configured Click group.
+
+    """
     click_group = typer.main.get_command(app)
     # Replace the group class with DefaultGroup
     click_group.__class__ = DefaultGroup
@@ -411,6 +565,47 @@ def cli() -> None:
     default_group = cast("DefaultGroup", click_group)
     default_group.default_cmd_name = "edit"
     default_group.default_if_no_args = True
+
+    # Add --version/-V option at the Click level
+    def version_callback(ctx: "Context", _param: "Parameter", value: bool) -> None:
+        """Show version and exit."""
+        if not value or ctx.resilient_parsing:
+            return
+        try:
+            pkg_version = _get_package_version()
+            click.echo(f"copyedit-ai: {pkg_version}")
+        except RuntimeError:
+            click.echo("Error: Failed to retrieve version", err=True)
+            ctx.exit(1)
+        ctx.exit(0)
+
+    # Add the version option to the Click group
+    default_group.params.append(
+        click.Option(
+            ["--version", "-V"],
+            is_flag=True,
+            expose_value=False,
+            is_eager=True,
+            help="Show the version and exit.",
+            callback=version_callback,
+        )
+    )
+
+    return default_group
+
+
+def cli() -> None:
+    """CLI entry point with default command support."""
+    default_group = setup_click_group()
+
+    existing_templates = templates_installed()
+
+    if not any(k for k in existing_templates if k.startswith("copyedit")):
+        logger.info(
+            "Copyedit template doesn't exist. Run the following\n\ncopyedit self init"
+        )
+    else:
+        logger.info("Copyedit template installed")
 
     # Attach llm passthrough commands to 'self' subcommand
     _attach_llm_passthroughs(default_group)

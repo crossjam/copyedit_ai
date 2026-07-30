@@ -14,6 +14,11 @@ dependencies = [
     "typer>=0.20,<0.21",
     "pydantic_settings",
     "rich",
+    "platformdirs",
+    "mdformat",
+    "mdformat-footnote",
+    "mdformat-front-matters",
+    "loguru-config",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -38,7 +43,7 @@ copyedit_ai = "copyedit_ai.__main__:cli"
 copyedit = "copyedit_ai.__main__:cli"
 
 [build-system]
-requires = ["uv_build>=0.7.19,<0.8"]
+requires = ["uv_build>=0.7.19,<0.11"]
 build-backend = "uv_build"
 
 [dependency-groups]
@@ -186,7 +191,9 @@ lint.ignore = [
   # first-line-ends-in-period (D415)
   "D415",
   # blank-except (BLE001)
-  "BLE001"
+  "BLE001",
+  # Too many arguments for logging (PLE1205)
+  "PLE1205",
  ]
 
 [tool.ruff.lint.per-file-ignores]

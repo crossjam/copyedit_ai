@@ -21,7 +21,7 @@ jobs:
     outputs:
       python-versions: ${{ steps.extract.outputs.versions }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - name: Extract Python test versions
@@ -47,7 +47,7 @@ jobs:
         python-version: ${{ fromJSON(needs.get-python-versions.outputs.python-versions) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv and set Python version.
         uses: astral-sh/setup-uv@v7
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -81,7 +81,7 @@ jobs:
           uv build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dist-files
           path: dist/
@@ -102,7 +102,7 @@ jobs:
 
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: dist-files
           path: dist/
@@ -122,18 +122,18 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: dist-files
           path: dist/
 
       - name: Auto-generate Changelog
-        uses: BobAnkh/auto-generate-changelog@v1.3.0
+        uses: BobAnkh/auto-generate-changelog@v1.3.1
         with:
           REPO_NAME: 'crossjam/copyedit_ai'
           ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,9 +4,15 @@ from collections.abc import Iterator
 from typing import Any
 
 import llm
+from llm.cli import LoadTemplateError, load_template
 from loguru import logger
 
-SYSTEM_PROMPT = """You are copyeditor that suggests and makes edits on text.
+from .user_dir import get_llm_config_dir, set_llm_user_path
+
+SYSTEM_PROMPT = """You are a copy editor that suggests and makes edits on text.
+
+You are as meticulous and detail oriented as a copy editor for
+The New York Times, The New Yorker, The Economist, or The Financial Times.
 
 You review the text you receive for punctuation, grammatical,
 spelling, and logical errors. Try hard to keep the style and tone but
@@ -24,6 +30,20 @@ If the text looks like markdown, ignore fenced quotes or leading text with
 > . Don't edit the quoted text.
 
 Do not modify emojis.
+
+Leave front matter between the following bracket sets unmodified
+
+YAML
+---
+---
+
+TOML
++++
++++
+
+JSON
+{ }
+
 """
 
 JSON_SYSTEM_PROMPT = """You are copyeditor that suggests and makes edits on text.
@@ -40,7 +60,44 @@ If the text looks like markdown, ignore fenced quotes or leading text with
 > . Don't edit the quoted text.
 
 Do not modify emojis.
+
+Leave front matter between the following bracket sets unmodified
+
+YAML
+---
+---
+
+TOML
++++
++++
+
+JSON
+{ }
 """
+
+
+def templates_installed() -> dict[str, str]:
+    """List available prompt templates"""
+    set_llm_user_path()
+    path = get_llm_config_dir() / "templates"
+
+    templates = {}
+    for file in path.glob("*.yaml"):
+        name = file.stem
+        try:
+            template = load_template(name)
+        except LoadTemplateError:
+            # Skip invalid templates
+            continue
+        text = []
+        if template.system:
+            text.append(f"system: {template.system}")
+            if template.prompt:
+                text.append(f" prompt: {template.prompt}")
+        else:
+            text = [template.prompt if template.prompt else ""]
+        templates[name] = "".join(text).replace("\n", " ")
+    return templates
 
 
 def copyedit(
@@ -72,16 +129,15 @@ def copyedit(
     # Prepare the prompt
     prompt_text = f"Copy edit the text that follows:\n\n{text}"
 
-    # Execute the prompt
+    template = load_template("copyedit")
+
+    # Structured output requires a deterministic system prompt. For normal
+    # output, preserve the user's configurable copyedit template.
     prompt_kwargs: dict[str, Any] = {
-        "system": JSON_SYSTEM_PROMPT if schema else SYSTEM_PROMPT,
+        "system": JSON_SYSTEM_PROMPT if schema is not None else template.system,
         "stream": stream,
     }
     if schema is not None:
         prompt_kwargs["schema"] = schema
 
-    response = model.prompt(prompt_text, **prompt_kwargs)
-
-    if stream:
-        return response
-    return response
+    return model.prompt(prompt_text, **prompt_kwargs)

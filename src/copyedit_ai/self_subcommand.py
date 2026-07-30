@@ -11,8 +11,11 @@ from importlib.metadata import version
 from pathlib import Path
 
 import typer
+import yaml
+from llm.cli import template_dir
 from loguru import logger
 
+from .copyedit import SYSTEM_PROMPT, templates_installed
 from .user_dir import (
     get_app_config_dir,
     get_llm_config_dir,
@@ -64,6 +67,31 @@ def init_command(
     try:
         app_config_dir = get_app_config_dir()
         llm_config_dir = get_llm_config_dir()
+
+        existing_templates = templates_installed()
+
+        if not any(k for k in existing_templates if k.startswith("copyedit")):
+            typer.secho(
+                "No copyedit llm templates found. Installing default",
+                fg=typer.colors.YELLOW,
+            )
+            default_template = {}
+            default_template["system"] = SYSTEM_PROMPT
+            template_path = template_dir() / "copyedit.yaml"
+            typer.secho(
+                f"Writing default template to: {template_path!s}",
+                fg=typer.colors.YELLOW,
+            )
+
+            template_path.write_text(
+                yaml.safe_dump(
+                    default_template,
+                    indent=4,
+                    default_flow_style=False,
+                    sort_keys=False,
+                ),
+                "utf-8",
+            )
 
         # Check if already initialized
         if is_initialized() and not force:
