@@ -3,13 +3,14 @@
 Copyedit text from the CLI using AI
 """
 
+import json
 import os
 import shutil
 import sys
 import tempfile
 from importlib.metadata import version as get_version
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 import llm
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     from click import Context, Parameter
 
 from .copyedit import copyedit, templates_installed
+from .schemas import get_copyedit_schema
 from .self_subcommand import cli as self_cli
 from .settings import Settings
 from .user_dir import get_app_config_dir
@@ -53,7 +55,9 @@ def _get_model_display_name(model_name: str) -> str:
                 # Return first alias if available
                 # (aliases are usually sorted shortest first)
                 if model_with_alias.aliases:
-                    return model_with_alias.aliases[0]
+                    return min(
+                        model_with_alias.aliases, key=lambda alias: (len(alias), alias)
+                    )
                 # Fall back to model_id
                 return model_with_alias.model.model_id
     except Exception:  # noqa: S110
@@ -70,6 +74,39 @@ app.add_typer(
     name="self",
     help="Manage the copyedit_ai command.",
 )
+
+
+class StructuredOutputError(ValueError):
+    """Raised when a model does not return the requested JSON structure."""
+
+
+def _get_structured_output(response: llm.Response) -> tuple[dict[str, Any], str]:
+    """Return and validate the structured model response."""
+    output_data = response.json()
+    if output_data is None:
+        try:
+            output_data = json.loads(response.text())
+        except json.JSONDecodeError as error:
+            message = "The model returned invalid JSON structured output"
+            raise StructuredOutputError(message) from error
+
+    if not isinstance(output_data, dict):
+        message = "The model returned a JSON value that is not an object"
+        raise StructuredOutputError(message)
+
+    output_text = output_data.get("copyedited_text")
+    if not isinstance(output_text, str):
+        message = "The model response is missing a string 'copyedited_text' field"
+        raise StructuredOutputError(message)
+
+    changes = output_data.get("changes")
+    if not isinstance(changes, list) or not all(
+        isinstance(change, str) for change in changes
+    ):
+        message = "The model response is missing a string list 'changes' field"
+        raise StructuredOutputError(message)
+
+    return output_data, output_text
 
 
 def _get_package_version() -> str:
@@ -156,6 +193,7 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
     model: str | None,
     stream: bool,
     replace: bool,
+    json_output: bool,
     wrap_width: int,
     markdown: bool,
 ) -> None:
@@ -213,12 +251,23 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
         )
         status.start()
 
-        response = copyedit(text, model_name=model_name, stream=stream)
+        response = copyedit(
+            text,
+            model_name=model_name,
+            stream=stream and not json_output,
+            schema=get_copyedit_schema() if json_output else None,
+        )
 
         # Collect the output
         output_text = ""
-        if stream:
-            if stream and markdown:
+        if json_output:
+            assert isinstance(response, llm.Response)  # noqa: S101
+            output_data, output_text = _get_structured_output(response)
+            status.stop()
+            if not replace:
+                typer.echo(json.dumps(output_data, ensure_ascii=False, indent=2))
+        elif stream:
+            if markdown:
                 logger.warning(
                     "Streaming output response does not "
                     "incorporate word wrapping to the console."
@@ -403,6 +452,11 @@ def edit_command(  # noqa: PLR0913
         "-r",
         help="Replace the original file after confirmation. Creates a .bak backup.",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output the copyedited text and changes as structured JSON.",
+    ),
     wrap_width: int = typer.Option(
         80,
         "--wrap-width",
@@ -422,15 +476,24 @@ def edit_command(  # noqa: PLR0913
     The copyedited text and a summary of changes are output to stdout.
 
     Examples:
-        copyedit < draft.txt
-        copyedit draft.txt
-        cat draft.txt | copyedit -m claude-opus
-        copyedit draft.txt --replace
+        copyedit_ai < draft.txt
+        copyedit_ai draft.txt
+        cat draft.txt | copyedit_ai -m claude-opus
+        copyedit_ai draft.txt --replace
+        copyedit_ai draft.txt --json
 
     """
     settings: Settings = ctx.obj
-
-    _perform_copyedit(settings, file_path, model, stream, replace, wrap_width, markdown)
+    _perform_copyedit(
+        settings,
+        file_path,
+        model,
+        stream,
+        replace,
+        json_output,
+        wrap_width,
+        markdown,
+    )
 
 
 def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:

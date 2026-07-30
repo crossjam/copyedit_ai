@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from copyedit_ai.copyedit import SYSTEM_PROMPT, copyedit
+from copyedit_ai.copyedit import JSON_SYSTEM_PROMPT, SYSTEM_PROMPT, copyedit
 
 
 @pytest.fixture
@@ -139,6 +139,32 @@ def test_copyedit_no_streaming(
 
     # Response should be the same object
     assert response == mock_llm_response
+
+
+@patch("copyedit_ai.copyedit.load_template")
+@patch("copyedit_ai.copyedit.llm")
+def test_copyedit_with_structured_output(
+    mock_llm,
+    mock_load_template,
+    mock_llm_model,
+    mock_llm_response,
+    mock_template,
+):
+    """Pass a schema to llm and use the structured-output system prompt."""
+    mock_llm.get_model.return_value = mock_llm_model
+    mock_llm_model.prompt.return_value = mock_llm_response
+    mock_load_template.return_value = mock_template
+    schema = {
+        "type": "object",
+        "properties": {"copyedited_text": {"type": "string"}},
+    }
+
+    copyedit("Test text.", stream=False, schema=schema)
+
+    call_args = mock_llm_model.prompt.call_args
+    assert call_args[1]["schema"] == schema
+    assert call_args[1]["stream"] is False
+    assert call_args[1]["system"] == JSON_SYSTEM_PROMPT
 
 
 @patch("copyedit_ai.copyedit.load_template")

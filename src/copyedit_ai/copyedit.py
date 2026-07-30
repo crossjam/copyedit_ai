@@ -1,6 +1,7 @@
 """Core copyediting functionality using LLM."""
 
 from collections.abc import Iterator
+from typing import Any
 
 import llm
 from llm.cli import LoadTemplateError, load_template
@@ -45,6 +46,35 @@ JSON
 
 """
 
+JSON_SYSTEM_PROMPT = """You are copyeditor that suggests and makes edits on text.
+
+You review the text you receive for punctuation, grammatical, spelling, and logical
+errors. Try hard to keep the style and tone but make corrections as needed.
+
+Return the complete corrected document in the `copyedited_text` field. Return a
+concise list of corrections and other changes in the `changes` field. Always return
+the complete document, even if you do not make any changes. Do not include
+commentary outside the requested structured response.
+
+If the text looks like markdown, ignore fenced quotes or leading text with
+> . Don't edit the quoted text.
+
+Do not modify emojis.
+
+Leave front matter between the following bracket sets unmodified
+
+YAML
+---
+---
+
+TOML
++++
++++
+
+JSON
+{ }
+"""
+
 
 def templates_installed() -> dict[str, str]:
     """List available prompt templates"""
@@ -75,6 +105,7 @@ def copyedit(
     model_name: str | None = None,
     *,
     stream: bool = True,
+    schema: dict[str, Any] | None = None,
 ) -> llm.Response | Iterator[str]:
     """Copyedit text using an LLM.
 
@@ -82,6 +113,7 @@ def copyedit(
         text: The text to copyedit
         model_name: Optional model name to use (defaults to llm's default model)
         stream: Whether to stream the response (default: True)
+        schema: Optional JSON schema for structured output
 
     Returns:
         LLM response object if not streaming, iterator of text chunks if streaming
@@ -99,5 +131,13 @@ def copyedit(
 
     template = load_template("copyedit")
 
-    # Execute the prompt
-    return model.prompt(prompt_text, system=template.system, stream=stream)
+    # Structured output requires a deterministic system prompt. For normal
+    # output, preserve the user's configurable copyedit template.
+    prompt_kwargs: dict[str, Any] = {
+        "system": JSON_SYSTEM_PROMPT if schema is not None else template.system,
+        "stream": stream,
+    }
+    if schema is not None:
+        prompt_kwargs["schema"] = schema
+
+    return model.prompt(prompt_text, **prompt_kwargs)

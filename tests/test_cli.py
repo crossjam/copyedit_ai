@@ -1,6 +1,7 @@
 """test copyedit_ai CLI: copyedit_ai."""
 
 import importlib
+import json
 import tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -33,6 +34,18 @@ def test_cli_help() -> None:
     """Test the main command-line interface help flag."""
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
+
+
+@patch("copyedit_ai.__main__.llm.get_models_with_aliases")
+def test_model_display_name_uses_shortest_alias(mock_get_models) -> None:
+    """Choose the shortest alias when llm returns aliases as a set."""
+    model_with_alias = MagicMock()
+    model_with_alias.matches.return_value = True
+    model_with_alias.aliases = {"long-model-name", "short"}
+    model_with_alias.model.model_id = "model-id"
+    mock_get_models.return_value = [model_with_alias]
+
+    assert main_module._get_model_display_name("model-id") == "short"  # noqa: SLF001
 
 
 def test_cli_entry_points_exist() -> None:
@@ -180,6 +193,29 @@ def test_cli_with_no_stream(mock_copyedit, tmp_path: Path) -> None:
     # Verify streaming was disabled
     call_kwargs = mock_copyedit.call_args[1]
     assert call_kwargs["stream"] is False
+
+
+@patch("copyedit_ai.__main__.copyedit")
+def test_cli_with_json_output(mock_copyedit, tmp_path: Path) -> None:
+    """The --json option requests and prints structured output."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test text with erors.")
+
+    mock_response = create_autospec(llm.Response, instance=True)
+    mock_response.json.return_value = {
+        "copyedited_text": "Test text with errors.",
+        "changes": ["Fixed spelling of 'erors'."],
+    }
+    mock_copyedit.return_value = mock_response
+
+    result = runner.invoke(cli, ["edit", "--json", str(test_file)])
+
+    assert result.exit_code == 0
+    assert json.loads(result.stdout) == mock_response.json.return_value
+    call_kwargs = mock_copyedit.call_args[1]
+    assert call_kwargs["stream"] is False
+    assert call_kwargs["schema"]["type"] == "object"
+    assert "copyedited_text" in call_kwargs["schema"]["required"]
 
 
 @patch("copyedit_ai.__main__.copyedit")
