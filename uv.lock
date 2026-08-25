@@ -164,11 +164,11 @@ wheels = [
 
 [[package]]
 name = "condense-json"
-version = "0.1.3"
+version = "1.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/b3/d784cbc05556192ea1e798cae96363835d649fe7420ff030190789645be1/condense_json-0.1.3.tar.gz", hash = "sha256:25fe8d434fdafd849e8d98f21a3e18f96ae2d6dbc2c17565f29e4843d039d2bc", size = 8697, upload-time = "2025-05-13T17:10:03.254Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/a5/7158b674fa5b890d80faaf42dd438d1a765661cd22430ddf499759cf44e1/condense_json-1.1.tar.gz", hash = "sha256:c455b54bbbab89a69f598b09f2003a89b738df20d30e6aa341c495401ec5b349", size = 25331, upload-time = "2026-08-03T04:57:30.744Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/5f/63badd4924358fad1efa6defd66eef700ccf8783c0e44098987f867e8b1f/condense_json-0.1.3-py3-none-any.whl", hash = "sha256:e0a3d42db4f44a89e74af8737d8e517e97420be0f7e5437087f4decfd38c3366", size = 8432, upload-time = "2025-05-13T17:10:01.665Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/87/48a56644104246d58612ee1fd0c7983d43331f5b889e60b75b4a1df02cfc/condense_json-1.1-py3-none-any.whl", hash = "sha256:8a59e214643d92b7daf360a8e6601040e535d8b9925ff6b34bb723d8fbc62f48", size = 15870, upload-time = "2026-08-03T04:57:29.402Z" },
 ]
 
 [[package]]
@@ -501,7 +501,7 @@ wheels = [
 
 [[package]]
 name = "llm"
-version = "0.31.1"
+version = "0.32.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -516,12 +516,11 @@ dependencies = [
     { name = "python-ulid" },
     { name = "pyyaml" },
     { name = "setuptools" },
-    { name = "sqlite-migrate" },
     { name = "sqlite-utils" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/02/2a/ac37d94f6ac91d501475d80a0a1d8fb6bce392f9d7b483bf87257342e0b7/llm-0.31.1.tar.gz", hash = "sha256:f99955cfd92cdf7b8dc08a795f68c688cefdbc4f9a67245988ccc1adb5c49eeb", size = 86518, upload-time = "2026-07-09T16:08:44.848Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/48/fdc15f4d93145b804338c0b69192440eb8322a9e0a4f249caa84501619e4/llm-0.32.1.tar.gz", hash = "sha256:c8fa27fd88e19d8d9081724dc78ef1b94871c962592463145ad71b3fc5506f6a", size = 150675, upload-time = "2026-08-21T17:22:10.842Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/9f/816e53685915a3b515f535816ae6909f036ee2767b9d668a7f3743ef5c84/llm-0.31.1-py3-none-any.whl", hash = "sha256:32a86f216da0797c43a87866737b36f3ba36da8f82f07ca099eb2bf10ed5e56f", size = 83954, upload-time = "2026-07-09T16:08:43.471Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/a7/5d0728f3e62036f89d7913471763900c6954dab8eee07a41861cd76edadf/llm-0.32.1-py3-none-any.whl", hash = "sha256:735f50ff515d0f5daccb9c53822ccd28a612b6b7746a7ea86d89176604bbec24", size = 142437, upload-time = "2026-08-21T17:22:09.312Z" },
 ]
 
 [[package]]
@@ -1502,18 +1501,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c2/6d/9dad6c3b433ab8912ace969c66abd595f8e0a2ccccdb73602b1291dbda29/sqlite-fts4-1.0.3.tar.gz", hash = "sha256:78b05eeaf6680e9dbed8986bde011e9c086a06cb0c931b3cf7da94c214e8930c", size = 9718, upload-time = "2022-07-30T01:14:26.943Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/29/0096e8b1811aaa78cfb296996f621f41120c21c2f5cd448ae1d54979d9fc/sqlite_fts4-1.0.3-py3-none-any.whl", hash = "sha256:0359edd8dea6fd73c848989e1e2b1f31a50fe5f9d7272299ff0e8dbaa62d035f", size = 9972, upload-time = "2022-07-30T01:14:24.942Z" },
-]
-
-[[package]]
-name = "sqlite-migrate"
-version = "0.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "sqlite-utils" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2c/be/cb7cfb197a864c1676cb5e7721169de4923f26fb4c25351e492cbdde8c22/sqlite_migrate-0.2.tar.gz", hash = "sha256:c6b78b5bb486b541a5c484c93a22079ad7fab8c142a26793830748586457b3c8", size = 1356, upload-time = "2026-07-07T16:34:52.24Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/eb/4c/43998786555c4c8193a06cb06d03f3f96277b6e3f454c394265026232675/sqlite_migrate-0.2-py3-none-any.whl", hash = "sha256:3f68a39c87357451b2e5571d2dc6d53bd52d63647053979f6e5b586b4ca81938", size = 2135, upload-time = "2026-07-07T16:34:51.437Z" },
 ]
 
 [[package]]
