@@ -1009,11 +1009,11 @@ wheels = [
 
 [[package]]
 name = "platformdirs"
-version = "4.11.0"
+version = "4.11.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/78/9b/560e4be8e26f6fd133a03630a8df0c663b9e8d61b4ade152b72005aec83b/platformdirs-4.11.0.tar.gz", hash = "sha256:0555d18370482847566ffabcaa53ad7c6c1c29f195989ae1ed634a05f76ea1e0", size = 31953, upload-time = "2026-07-21T13:09:36.565Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/1d/6e762a6b060e662208951aefc5c39f6a96a272c4a10c0c1f7b6113fc3c09/platformdirs-4.11.6.tar.gz", hash = "sha256:1a4016e373f89f8ec458431fe0e0c5c4285858ac623f3e20efdfcbc0bd862941", size = 35131, upload-time = "2026-09-01T04:41:00.6Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/68/d8d58938dfb1370b266a1a729e6d77a985be23689a0496498ee17b2cbf90/platformdirs-4.11.0-py3-none-any.whl", hash = "sha256:360ccded2b7fce0af0ff80cc8f5942a1c5d99b0e856033acb030bfc634709e74", size = 23247, upload-time = "2026-07-21T13:09:35.422Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/d8/2784c6eabb991b5b7494ff9e9888c74a0a72ad613c3ec5adbfcecc0724c7/platformdirs-4.11.6-py3-none-any.whl", hash = "sha256:b22d992e863bc651c26b16242041c7979db6e3286e548f9a76cc91238fac599e", size = 23938, upload-time = "2026-09-01T04:40:58.977Z" },
 ]
 
 [[package]]
