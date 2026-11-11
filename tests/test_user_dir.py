@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -150,20 +151,9 @@ def test_set_llm_user_path_respects_existing(tmp_path: Path, monkeypatch) -> Non
 
 def test_initialize_permission_error(tmp_path: Path, monkeypatch) -> None:
     """Test initialize handles permission errors gracefully."""
-    # Skip test if running as root (permissions work differently)
-    if os.getuid() == 0:
-        pytest.skip("Test skipped when running as root")
-
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-
-    # Make the directory read-only
-    app_config_dir = tmp_path / "dev.pirateninja.copyedit_ai"
-    app_config_dir.mkdir(parents=True)
-    app_config_dir.chmod(0o444)  # Read-only
-
-    try:
-        with pytest.raises(OSError):  # noqa: PT011
-            user_dir.initialize()
-    finally:
-        # Cleanup: restore permissions
-        app_config_dir.chmod(0o755)
+    with (
+        patch.object(Path, "mkdir", side_effect=PermissionError("Access denied")),
+        pytest.raises(PermissionError, match="Access denied"),
+    ):
+        user_dir.initialize()
