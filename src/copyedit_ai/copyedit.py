@@ -95,7 +95,7 @@ def templates_installed() -> dict[str, str]:
             if template.prompt:
                 text.append(f" prompt: {template.prompt}")
         else:
-            text = [template.prompt if template.prompt else ""]
+            text = [template.prompt or ""]
         templates[name] = "".join(text).replace("\n", " ")
     return templates
 
