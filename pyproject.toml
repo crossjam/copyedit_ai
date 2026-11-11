@@ -8,10 +8,10 @@ authors = [{name = "crossjam", email = "bmd@pirateninja.dev"}]
 repository = "https://github.com/crossjam/copyedit_ai"
 requires-python = ">=3.13,<4.0"
 dependencies = [
-    "click>=8.3.3,<8.4",
+    "click>=8.3.3,<8.6",
     "llm",
     "loguru",
-    "typer>=0.20,<0.21",
+    "typer>=0.20,<0.28",
     "pydantic_settings",
     "rich",
     "platformdirs",
@@ -43,7 +43,7 @@ copyedit_ai = "copyedit_ai.__main__:cli"
 copyedit = "copyedit_ai.__main__:cli"
 
 [build-system]
-requires = ["uv_build>=0.7.19,<0.13"]
+requires = ["uv_build>=0.7.19,<0.14"]
 build-backend = "uv_build"
 
 [dependency-groups]
@@ -51,7 +51,7 @@ dev = [
     "poethepoet",
     "pytest",
     "pytest-cov",
-    "ruff>=0.14.6,<0.15",
+    "ruff>=0.14.6,<0.18",
     "ty",
     "toml-cli",
     "pip-audit>=2.10.1",
@@ -172,6 +172,8 @@ lint.select = [
   "ALL"
 ]
 lint.ignore = [
+  # Copyright notices are maintained in LICENSE rather than each source file.
+  "CPY001",
   # missing-trailing-comma (COM812)
   "COM812",
   # incorrect-blank-line-before-class (D203)
