@@ -187,7 +187,7 @@ def _check_word_wrapping_applied(
             )
 
 
-def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915
+def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915, PLR0917
     settings: Settings,
     file_path: Path | None,
     model: str | None,
@@ -427,7 +427,7 @@ def main_callback(
 
 
 @app.command(name="edit")
-def edit_command(  # noqa: PLR0913
+def edit_command(  # noqa: PLR0913, PLR0917
     ctx: typer.Context,
     file_path: Path | None = typer.Argument(
         None,

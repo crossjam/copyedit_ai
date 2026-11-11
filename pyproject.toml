@@ -51,7 +51,7 @@ dev = [
     "poethepoet",
     "pytest",
     "pytest-cov",
-    "ruff>=0.14.6,<0.15",
+    "ruff>=0.14.6,<0.18",
     "ty",
     "toml-cli",
     "pip-audit>=2.10.1",
@@ -172,6 +172,8 @@ lint.select = [
   "ALL"
 ]
 lint.ignore = [
+  # Copyright notices are maintained in LICENSE rather than each source file.
+  "CPY001",
   # missing-trailing-comma (COM812)
   "COM812",
   # incorrect-blank-line-before-class (D203)
