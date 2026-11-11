@@ -215,4 +215,4 @@ lint.ignore = [
 [tool.ty]
 
 [tool.copyedit_ai.ci]
-test-python-versions = 3.14
+test-python-versions = ["3.13", "3.14"]
