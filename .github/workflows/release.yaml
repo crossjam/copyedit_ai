@@ -28,12 +28,12 @@ jobs:
         id: extract
         run: |
           # Try to extract test versions from pyproject.toml, fallback to default if missing
-          if versions=$(uv run toml get --toml-path pyproject.toml tool.copyedit_ai.ci.test-python-versions 2>/dev/null); then
+          if versions=$(uv run --locked python -c 'import json, pathlib, tomllib; config = tomllib.loads(pathlib.Path("pyproject.toml").read_text()); print(json.dumps(config["tool"]["copyedit_ai"]["ci"]["test-python-versions"]))'); then
             echo "Using Python versions from pyproject.toml: $versions"
             echo "versions=$versions" >> $GITHUB_OUTPUT
           else
             echo "No test-python-versions found in pyproject.toml, using default versions"
-            echo 'versions=3.14' >> $GITHUB_OUTPUT
+            echo 'versions=["3.13", "3.14"]' >> $GITHUB_OUTPUT
           fi
 
   test:
