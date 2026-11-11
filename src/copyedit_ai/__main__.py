@@ -17,25 +17,55 @@ import llm
 import mdformat
 import typer
 import typer.main
-from click_default_group import DefaultGroup
 from rich.console import Console
 from rich.status import Status
-
-from .logging_config import get_logger, setup_logging
-
-if TYPE_CHECKING:
-    from click import Context, Parameter
+from typer.core import TyperGroup
 
 from .copyedit import copyedit, templates_installed
+from .logging_config import get_logger, setup_logging
 from .schemas import get_copyedit_schema
 from .self_subcommand import cli as self_cli
 from .settings import Settings
 from .user_dir import get_app_config_dir
 
+if TYPE_CHECKING:
+    from typer._click import Context
+
 console = Console(stderr=True)
 logger = get_logger("copyedit")
 
-app = typer.Typer()
+
+class DefaultTyperGroup(TyperGroup):
+    """Route file arguments and stdin to edit using Typer's native commands."""
+
+    ignore_unknown_options = True
+
+    def parse_args(self, ctx: "Context", args: list[str]) -> list[str]:
+        """Select edit when invoked without an explicit command."""
+        return super().parse_args(ctx, args or ["edit"])
+
+    def resolve_command(
+        self, ctx: "Context", args: list[str]
+    ) -> tuple[str | None, Any, list[str]]:
+        """Pass file names and edit options to the default command."""
+        if args and args[0] not in self.commands:
+            args = ["edit", *args]
+        return super().resolve_command(ctx, args)
+
+    def invoke(self, ctx: "Context") -> object:
+        """Translate external Click exits from LLM commands into Typer exits."""
+        try:
+            return super().invoke(ctx)
+        except click.exceptions.Exit as error:
+            raise typer.Exit(error.exit_code) from error
+        except click.ClickException as error:
+            error.show()
+            raise typer.Exit(error.exit_code) from error
+        except click.Abort:
+            raise typer.Abort from None
+
+
+app = typer.Typer(cls=DefaultTyperGroup)
 
 
 def _get_model_display_name(model_name: str) -> str:
@@ -388,6 +418,13 @@ def _perform_copyedit(  # noqa: C901, PLR0912, PLR0913, PLR0915, PLR0917
         raise typer.Exit(1) from e
 
 
+def _version_callback(value: bool) -> None:
+    """Print the version before loading settings or selecting the default command."""
+    if value:
+        version_command()
+        raise typer.Exit
+
+
 @app.callback()
 def main_callback(
     ctx: typer.Context,
@@ -401,6 +438,14 @@ def main_callback(
         None,
         "--log-file",
         help="Path to log file. If not specified, logging to file is disabled.",
+    ),
+    _version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the version and exit.",
     ),
 ) -> None:
     """Copyedit text from the CLI using AI"""
@@ -496,7 +541,7 @@ def edit_command(  # noqa: PLR0913, PLR0917
     )
 
 
-def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
+def _attach_llm_passthroughs(main_group: TyperGroup) -> None:
     """Attach llm's command groups to the 'self' subcommand.
 
     This allows users to access llm's native commands within copyedit's
@@ -519,7 +564,7 @@ def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
         return
 
     # Type assertion: self_command is a Group (has commands and add_command)
-    self_command = cast("click.Group", self_command)
+    self_command = cast("TyperGroup", self_command)
 
     # List of llm commands to pass through
     passthrough_commands = [
@@ -542,56 +587,23 @@ def _attach_llm_passthroughs(main_group: DefaultGroup) -> None:
 
         llm_command = llm_cli.commands.get(cmd_name)
         if llm_command:
-            self_command.add_command(llm_command, name=cmd_name)
+            # LLM exposes external Click commands; Typer accepts their command API.
+            self_command.add_command(cast("Any", llm_command), name=cmd_name)
             logger.debug("Attached llm command: {}", cmd_name)
         else:
             logger.warning("Could not find llm command: {}", cmd_name)
 
 
-def setup_click_group() -> "DefaultGroup":
-    """Set up the Click group with DefaultGroup and version option.
+def setup_click_group() -> TyperGroup:
+    """Build the native Typer group with default-command and version support.
 
     This function is used by both the CLI entry point and tests.
 
     Returns:
-        The configured Click group.
+        The configured Typer group.
 
     """
-    click_group = typer.main.get_command(app)
-    # Replace the group class with DefaultGroup
-    click_group.__class__ = DefaultGroup
-
-    # Cast to tell type checker about the new type
-    default_group = cast("DefaultGroup", click_group)
-    default_group.default_cmd_name = "edit"
-    default_group.default_if_no_args = True
-
-    # Add --version/-V option at the Click level
-    def version_callback(ctx: "Context", _param: "Parameter", value: bool) -> None:
-        """Show version and exit."""
-        if not value or ctx.resilient_parsing:
-            return
-        try:
-            pkg_version = _get_package_version()
-            click.echo(f"copyedit-ai: {pkg_version}")
-        except RuntimeError:
-            click.echo("Error: Failed to retrieve version", err=True)
-            ctx.exit(1)
-        ctx.exit(0)
-
-    # Add the version option to the Click group
-    default_group.params.append(
-        click.Option(
-            ["--version", "-V"],
-            is_flag=True,
-            expose_value=False,
-            is_eager=True,
-            help="Show the version and exit.",
-            callback=version_callback,
-        )
-    )
-
-    return default_group
+    return cast("TyperGroup", typer.main.get_command(app))
 
 
 def cli() -> None:
