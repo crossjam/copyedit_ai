@@ -18,7 +18,7 @@ class OfflineModel(llm.Model):
     can_stream = True
     supports_schema = True
 
-    def execute(self, prompt, stream, response, conversation=None):
+    def execute(self, prompt, stream, response, conversation=None):  # noqa: ARG002
         """Return text chunks or schema-conforming JSON without a provider call."""
         assert "Text with erors." in prompt.prompt
         if prompt.schema is not None:
