@@ -172,6 +172,8 @@ lint.select = [
   "ALL"
 ]
 lint.ignore = [
+  # Copyright notices are maintained in LICENSE rather than each source file.
+  "CPY001",
   # missing-trailing-comma (COM812)
   "COM812",
   # incorrect-blank-line-before-class (D203)
