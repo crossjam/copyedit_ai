@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, create_autospec, patch
 
 import llm
+import pytest
 from click.testing import CliRunner as ClickRunner
 from loguru import logger as loguru_logger
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
-    from click_default_group import DefaultGroup
+    from typer.core import TyperGroup
 
 main_module_name = "copyedit_ai.__main__"
 main_module = importlib.import_module(main_module_name)
@@ -22,8 +23,8 @@ runner = CliRunner()
 cli = main_module.app
 
 
-def _get_click_cli() -> "DefaultGroup":
-    """Get the Click CLI with DefaultGroup for testing.
+def _get_click_cli() -> "TyperGroup":
+    """Get the native group with default-command support for testing.
 
     This uses the shared setup function from the main module.
     """
@@ -111,6 +112,52 @@ def test_cli_version_option_short(project_version: str) -> None:
     result = click_runner.invoke(click_cli, ["-V"])
     assert result.exit_code == 0
     assert result.output.strip() == f"copyedit-ai: {project_version}"
+
+
+@pytest.mark.parametrize(("args", "stream"), [([], True), (["--no-stream"], False)])
+@patch("copyedit_ai.__main__._perform_copyedit")
+def test_default_command_reads_stdin(mock_perform, args, stream) -> None:
+    """Route stdin and edit flags through the installed command's native group."""
+    result = ClickRunner().invoke(_get_click_cli(), args, input="Draft text")
+    assert result.exit_code == 0, result.output
+    mock_perform.assert_called_once()
+    assert mock_perform.call_args.args[1] is None
+    assert mock_perform.call_args.args[3] is stream
+
+
+@patch("copyedit_ai.__main__._perform_copyedit")
+def test_default_command_accepts_file(mock_perform, tmp_path: Path) -> None:
+    """A file name without the edit subcommand still selects edit."""
+    draft = tmp_path / "draft.txt"
+    draft.write_text("Draft text")
+    result = ClickRunner().invoke(_get_click_cli(), [str(draft), "--no-stream"])
+    assert result.exit_code == 0, result.output
+    assert mock_perform.call_args.args[1] == draft
+    assert mock_perform.call_args.args[3] is False
+
+
+@pytest.mark.parametrize("command", ["templates", "keys", "models"])
+def test_passthrough_executes_click_command(
+    command, tmp_path: Path, monkeypatch
+) -> None:
+    """Execute LLM commands across Typer and external Click context boundaries."""
+    monkeypatch.setenv("LLM_USER_PATH", str(tmp_path / "llm"))
+    group = _get_click_cli()
+    main_module._attach_llm_passthroughs(group)  # noqa: SLF001
+    result = ClickRunner().invoke(group, ["self", command, "list"])
+    assert result.exit_code == 0, result.output
+
+
+def test_passthrough_usage_error(tmp_path: Path, monkeypatch) -> None:
+    """Preserve external Click's usage-error exit status without a traceback."""
+    monkeypatch.setenv("LLM_USER_PATH", str(tmp_path / "llm"))
+    group = _get_click_cli()
+    main_module._attach_llm_passthroughs(group)  # noqa: SLF001
+    result = ClickRunner().invoke(group, ["self", "models", "--invalid-option"])
+    usage_error_exit_code = 2
+    assert result.exit_code == usage_error_exit_code
+    assert "No such option" in result.output
+    assert "Traceback" not in result.output
 
 
 @patch("copyedit_ai.__main__.copyedit")
@@ -202,16 +249,18 @@ def test_cli_with_json_output(mock_copyedit, tmp_path: Path) -> None:
     test_file.write_text("Test text with erors.")
 
     mock_response = create_autospec(llm.Response, instance=True)
-    mock_response.json.return_value = {
+    output_data = {
         "copyedited_text": "Test text with errors.",
         "changes": ["Fixed spelling of 'erors'."],
     }
+    mock_response.text.return_value = json.dumps(output_data)
+    mock_response.json.return_value = {"id": "provider-response", "choices": []}
     mock_copyedit.return_value = mock_response
 
     result = runner.invoke(cli, ["edit", "--json", str(test_file)])
 
     assert result.exit_code == 0
-    assert json.loads(result.stdout) == mock_response.json.return_value
+    assert json.loads(result.stdout) == output_data
     call_kwargs = mock_copyedit.call_args[1]
     assert call_kwargs["stream"] is False
     assert call_kwargs["schema"]["type"] == "object"
