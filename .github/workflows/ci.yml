@@ -23,7 +23,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: ['3.13', '3.14']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
@@ -35,7 +35,7 @@ jobs:
     name: Lint and types
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: '3.14'
@@ -49,19 +49,35 @@ jobs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: '3.14'
           enable-cache: true
       - run: uv sync --locked --group docs
       - run: uv run --locked --group docs mkdocs build --strict
+      - name: Upload Pages preview artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/
+      - name: Download Pages preview artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: github-pages
+          path: pages-preview/
+      - name: Verify Pages archive
+        run: |
+          mkdir pages-extracted
+          tar -xf pages-preview/artifact.tar -C pages-extracted
+          test -s pages-extracted/index.html
+          test -s pages-extracted/search/search_index.json
+          test -s pages-extracted/reference/copyedit_ai/index.html
 
   package:
     name: Build and install distributions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: '3.14'
