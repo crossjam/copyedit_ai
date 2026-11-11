@@ -56,6 +56,22 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --group docs
       - run: uv run --locked --group docs mkdocs build --strict
+      - name: Upload Pages preview artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/
+      - name: Download Pages preview artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: github-pages
+          path: pages-preview/
+      - name: Verify Pages archive
+        run: |
+          mkdir pages-extracted
+          tar -xf pages-preview/artifact.tar -C pages-extracted
+          test -s pages-extracted/index.html
+          test -s pages-extracted/search/search_index.json
+          test -s pages-extracted/reference/copyedit_ai/index.html
 
   package:
     name: Build and install distributions
