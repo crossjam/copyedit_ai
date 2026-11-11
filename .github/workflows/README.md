@@ -4,6 +4,14 @@ This directory contains GitHub Actions workflows for automated testing, building
 
 ## Workflows Overview
 
+### ci.yml - Validate
+
+Runs on pull requests, pushes to `main`, and manual dispatch with read-only
+repository permissions. Checks include Python 3.13/3.14 tests on Linux, macOS,
+and Windows; non-mutating Ruff and ty checks; a strict documentation build;
+and wheel/sdist builds with clean CLI installation smoke tests. It does not
+publish packages or deploy documentation.
+
 ### release.yaml - Test, Publish and Release
 
 A comprehensive CI/CD pipeline with the following stages:
@@ -32,10 +40,11 @@ The workflow automatically detects Python test versions from your `pyproject.tom
 
 ```toml
 [tool.copyedit_ai.ci]
-test-python-versions = ["3.11", "3.12", "3.13"]
+test-python-versions = ["3.13", "3.14"]
 ```
 
-If not found, falls back to cookiecutter template defaults.
+If not found, falls back to Python 3.13 and 3.14. Use an array of strings,
+not a number, so GitHub Actions can construct the test matrix.
 
 ### Matrix Testing
 
