@@ -112,13 +112,12 @@ class StructuredOutputError(ValueError):
 
 def _get_structured_output(response: llm.Response) -> tuple[dict[str, Any], str]:
     """Return and validate the structured model response."""
-    output_data = response.json()
-    if output_data is None:
-        try:
-            output_data = json.loads(response.text())
-        except json.JSONDecodeError as error:
-            message = "The model returned invalid JSON structured output"
-            raise StructuredOutputError(message) from error
+    # LLM's json() exposes the provider envelope, not the generated answer.
+    try:
+        output_data = json.loads(response.text())
+    except json.JSONDecodeError as error:
+        message = "The model returned invalid JSON structured output"
+        raise StructuredOutputError(message) from error
 
     if not isinstance(output_data, dict):
         message = "The model returned a JSON value that is not an object"

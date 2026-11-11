@@ -249,16 +249,18 @@ def test_cli_with_json_output(mock_copyedit, tmp_path: Path) -> None:
     test_file.write_text("Test text with erors.")
 
     mock_response = create_autospec(llm.Response, instance=True)
-    mock_response.json.return_value = {
+    output_data = {
         "copyedited_text": "Test text with errors.",
         "changes": ["Fixed spelling of 'erors'."],
     }
+    mock_response.text.return_value = json.dumps(output_data)
+    mock_response.json.return_value = {"id": "provider-response", "choices": []}
     mock_copyedit.return_value = mock_response
 
     result = runner.invoke(cli, ["edit", "--json", str(test_file)])
 
     assert result.exit_code == 0
-    assert json.loads(result.stdout) == mock_response.json.return_value
+    assert json.loads(result.stdout) == output_data
     call_kwargs = mock_copyedit.call_args[1]
     assert call_kwargs["stream"] is False
     assert call_kwargs["schema"]["type"] == "object"
